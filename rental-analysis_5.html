@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rental Income Analysis</title>
+<meta name="description" content="Long-term and short-term rental investment calculator for Hilton Head Island and Bluffton, SC.">
+<style>
+  :root{
+    --bg:#f8f7f3; --card:#fffefb; --ink:#1f1d1a; --muted:#6b665e; --rule:#e4e0d6;
+    --accent:#2f5d50; --accent-soft:#e7efe9; --good:#2f6b3f; --good-bg:#e6f0e7;
+    --bad:#a2402e; --bad-bg:#f6e6e1; --neutral-bg:#efece4;
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45}
+  a{color:var(--accent)}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 16px 64px}
+
+  /* Brand header */
+  .brand{background:#1b1a18;color:#fff}
+  .brand-in{max-width:1180px;margin:0 auto;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand-l,.brand-r{display:flex;align-items:center;gap:14px;text-decoration:none;color:#fff;min-width:0}
+  .brand img{display:block;height:38px;width:auto;mix-blend-mode:screen}
+  .brand .logo-compass{height:32px}
+  .brand .sep{width:1px;height:28px;background:rgba(255,255,255,.28)}
+  .brand .fallback{display:none;font-family:var(--serif);font-size:20px;letter-spacing:.14em;text-transform:uppercase}
+  .brand .broker{font-size:12.5px;color:rgba(255,255,255,.72);white-space:nowrap}
+  @media (max-width:560px){ .brand img{height:30px} .brand .logo-compass{height:24px} .brand .broker{display:none} }
+  .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .back{font-size:13px;color:var(--muted);text-decoration:none}
+  .back:hover{color:var(--accent)}
+  h1{font-family:var(--serif);font-weight:normal;font-size:34px;letter-spacing:-.01em;margin:6px 0 4px}
+  .lede{color:var(--muted);max-width:680px;margin:0 0 26px}
+
+  /* Stop headers */
+  .stop{display:flex;align-items:baseline;gap:12px;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
+  .stop .num{font-family:var(--serif);font-size:13px;color:var(--accent);letter-spacing:.08em}
+  .stop h2{font-family:var(--serif);font-weight:normal;font-size:21px;margin:0}
+
+  /* Mode picker */
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:30px}
+  .mode{all:unset;cursor:pointer;position:relative;background:#1b1a18;color:#fff;border-radius:12px;padding:18px 20px;transition:box-shadow .15s, transform .1s, opacity .15s;opacity:.62}
+  .mode:hover{opacity:.85}
+  .mode:active{transform:scale(.99)}
+  .mode:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .mode[aria-pressed="true"]{opacity:1;box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--accent)}
+  .mode .tag{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+  .mode .t{font-family:var(--serif);font-size:20px;margin:4px 0 4px;color:#fff}
+  .mode .d{color:rgba(255,255,255,.72);font-size:13.5px}
+  .mode .chk{position:absolute;top:14px;right:16px;width:22px;height:22px;border-radius:50%;border:1.5px solid rgba(255,255,255,.45);display:flex;align-items:center;justify-content:center;font-size:13px;color:transparent}
+  .mode[aria-pressed="true"] .chk{background:#fff;border-color:#fff;color:#1b1a18}
+
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:28px;align-items:start}
+  .inputs section{margin-bottom:28px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+  .field{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .field.wide{grid-column:1/-1}
+  .field{position:relative}
+  .field label{font-size:12.5px;color:var(--muted)}
+  .lab{display:flex;align-items:center;gap:6px;min-height:18px}
+  .q{all:unset;cursor:pointer;width:16px;height:16px;border-radius:50%;border:1px solid #bdb7aa;color:var(--muted);font-size:10.5px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;flex:none;line-height:1}
+  .q:hover,.q[aria-expanded="true"]{background:#1b1a18;border-color:#1b1a18;color:#fff}
+  .q:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .pop{display:none;position:absolute;z-index:20;left:0;top:24px;width:min(300px,100%);background:#1b1a18;color:#fff;font-size:12.5px;line-height:1.45;padding:10px 12px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+  .pop.open{display:block}
+  .pop::before{content:"";position:absolute;top:-5px;left:var(--arrow,40px);width:10px;height:10px;background:#1b1a18;transform:rotate(45deg)}
+  .ctl{display:flex;align-items:center;background:var(--card);border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+  .ctl:focus-within{border-color:var(--accent)}
+  .ctl span{padding:0 0 0 10px;color:var(--muted);font-size:14px}
+  .ctl span.suf{padding:0 10px 0 0}
+  .ctl input,.ctl select{all:unset;flex:1;min-width:0;padding:9px 10px;font-size:15px;font-variant-numeric:tabular-nums}
+  .help{font-size:12px;color:var(--muted)}
+  .find{all:unset;cursor:pointer;white-space:nowrap;font-size:13px;padding:0 14px;align-self:stretch;display:flex;align-items:center;background:#1b1a18;color:#fff}
+  .find[aria-disabled="true"]{opacity:.35;cursor:default}
+  .find:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .note{font-size:13px;color:var(--muted);background:var(--neutral-bg);border-radius:8px;padding:10px 12px;margin-top:12px}
+  .note b{color:var(--ink);font-weight:600}
+
+  /* Results */
+  .results{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto;overscroll-behavior:contain;padding-right:2px}
+  .panel{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:18px 18px 8px;margin-bottom:14px}
+  .panel h3{font-family:var(--serif);font-weight:normal;font-size:17px;margin:0 0 12px}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+  .kpi{background:var(--bg);border-radius:8px;padding:10px 12px}
+  .kpi .l{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .kpi .v{font-size:22px;font-variant-numeric:tabular-nums;margin-top:2px}
+  .kpi .v.neg{color:var(--bad)}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13.5px}
+  td,th{padding:6px 0;border-bottom:1px solid var(--rule);text-align:right}
+  td:first-child,th:first-child{text-align:left;color:var(--ink)}
+  th{font-weight:normal;color:var(--muted);font-size:12px}
+  tr.sub td{font-weight:600}
+  tr.total td{font-weight:600;border-bottom:none}
+  tr.sect td{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;padding-top:12px}
+  .neg{color:var(--bad)}
+  .checks{list-style:none;margin:0;padding:0}
+  .checks li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--rule);font-size:13.5px}
+  .checks li:last-child{border-bottom:none}
+  .chip{font-size:11.5px;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .chip.y{background:var(--good-bg);color:var(--good)}
+  .chip.n{background:var(--bad-bg);color:var(--bad)}
+  .chip.na{background:var(--neutral-bg);color:var(--muted)}
+  .verdict{font-size:13.5px;padding:10px 12px;border-radius:8px;margin:4px 0 12px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .btn{all:unset;cursor:pointer;font-size:13.5px;padding:8px 14px;border-radius:8px;border:1px solid var(--rule);background:var(--card)}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .copied{font-size:12.5px;color:var(--good);align-self:center}
+
+  .proj{margin-top:6px}
+  .proj-wrap{overflow-x:auto}
+
+  footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--rule);color:var(--muted);font-size:12.5px}
+  footer .who{color:var(--ink);font-size:14px;margin-bottom:8px}
+  .disclaimer{max-width:820px}
+
+  .mbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--card);border-top:1px solid var(--rule);padding:10px 16px;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -4px 16px rgba(0,0,0,.05)}
+  .mbar .m{font-size:13px;color:var(--muted)}
+  .mbar .m b{color:var(--ink);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+  .mbar .m b.neg{color:var(--bad)}
+  .hidden{display:none !important}
+
+  /* Lead gate */
+  dialog.gate{border:none;border-radius:14px;padding:0;width:min(440px,calc(100vw - 32px));background:var(--card);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  dialog.gate::backdrop{background:rgba(20,19,17,.55)}
+  .gate form{padding:22px 22px 18px}
+  .gate h3{font-family:var(--serif);font-weight:normal;font-size:21px;margin:0 0 4px}
+  .gate p.sub{color:var(--muted);font-size:13.5px;margin:0 0 16px}
+  .gate .field{margin-bottom:12px}
+  .gate .consent{font-size:11.5px;color:var(--muted);margin:4px 0 16px}
+  .gate .row{display:flex;gap:8px;justify-content:flex-end}
+  .gate .err{color:var(--bad);font-size:12.5px;min-height:16px;margin:-4px 0 8px}
+  .gate .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  .gate .done{padding:26px 22px}
+  .toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#1b1a18;color:#fff;font-size:13.5px;padding:10px 16px;border-radius:8px;z-index:30;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+  .print-gate{display:none}
+
+  @media (max-width: 900px){
+    .layout{grid-template-columns:1fr}
+    .results{position:static;max-height:none;overflow:visible}
+    .mbar{display:flex}
+    body{padding-bottom:64px}
+  }
+  @media (max-width: 560px){
+    .modes{gap:10px}
+    .mode{padding:14px 14px}
+    .mode .t{font-size:17px}
+    .mode .d{display:none}
+    .mode .chk{top:12px;right:12px;width:18px;height:18px;font-size:11px}
+    .grid{grid-template-columns:1fr}
+    h1{font-size:28px}
+  }
+  @media print{
+    body{background:#fff;font-size:12px}
+    .brand{background:#fff;color:#000;border-bottom:1px solid var(--rule)}
+    .brand img{mix-blend-mode:multiply}
+    .brand .logo-sequel{filter:invert(1)}
+    .brand .logo-compass{filter:invert(1)}
+    .brand .sep{background:var(--rule)}
+    .brand .broker{color:#555}
+    .back,.modes,.actions,.help,.no-print,.mbar,.q,.pop,dialog,.toast{display:none !important}
+    body.gated:not(.unlocked) > *:not(.print-gate){display:none !important}
+    body.gated:not(.unlocked) .print-gate{display:block;padding:40px;font-size:16px}
+    .results{max-height:none;overflow:visible}
+    .layout{grid-template-columns:1fr 1fr;gap:18px}
+    .results{position:static}
+    .panel,.kpi{break-inside:avoid}
+    .ctl{border:none;border-bottom:1px solid var(--rule);border-radius:0}
+    .wrap{padding:0}
+  }
+</style>
+</head>
+<body>
+<header class="brand">
+  <div class="brand-in">
+    <a class="brand-l" href="https://www.sequelsc.com" aria-label="Sequel Real Estate Group">
+      <img class="logo-sequel" src="https://sequelsc.com/wp-content/uploads/2024/08/logowhite1.png" alt="Sequel Real Estate Group" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+      <span class="fallback">Sequel</span>
+    </a>
+    <div class="brand-r">
+      <span class="broker">Chris England, Broker</span>
+      <span class="sep" aria-hidden="true"></span>
+      <img class="logo-compass" src="data:image/png;base64,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" alt="Compass" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+      <span class="fallback">Compass</span>
+    </div>
+  </div>
+</header>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="working-tools.html">← Working Tools</a>
+  </div>
+  <h1>Rental Income Analysis</h1>
+  <p class="lede">Estimate cash flow, cap rate and cash-on-cash return for a Hilton Head or Bluffton investment property. Choose a rental strategy, enter what you know, and the results update as you type.</p>
+
+  <div class="stop"><span class="num">01</span><h2>Rental strategy</h2></div>
+  <div class="modes" role="group" aria-label="Rental strategy">
+    <button class="mode" data-mode="ltr" aria-pressed="true">
+      <span class="chk" aria-hidden="true">✓</span>
+      <div class="tag">Long-term</div>
+      <div class="t">Annual lease</div>
+      <div class="d">12-month tenant, monthly rent, traditional property management.</div>
+    </button>
+    <button class="mode" data-mode="str" aria-pressed="false">
+      <span class="chk" aria-hidden="true">✓</span>
+      <div class="tag">Short-term</div>
+      <div class="t">Vacation rental</div>
+      <div class="d">Nightly bookings, occupancy-driven revenue, vacation rental management.</div>
+    </button>
+  </div>
+
+  <div class="layout">
+    <div class="inputs" id="inputs"></div>
+
+    <aside class="results" aria-live="polite">
+      <div class="actions">
+        <button class="btn primary" id="btnPrint">Print / Save PDF</button>
+        <button class="btn hidden" id="btnEmail">Email me this analysis</button>
+        <button class="btn" id="btnLink">Copy link to this analysis</button>
+        <button class="btn" id="btnReset">Reset</button>
+        <span class="copied hidden" id="copied">Link copied</span>
+      </div>
+
+      <div class="panel">
+        <h3 id="resTitle">Year-one results</h3>
+        <div class="kpis">
+          <div class="kpi"><div class="l">Monthly cash flow</div><div class="v" id="kCF">–</div></div>
+          <div class="kpi"><div class="l">Cash-on-cash</div><div class="v" id="kCoC">–</div></div>
+          <div class="kpi"><div class="l">Cap rate</div><div class="v" id="kCap">–</div></div>
+          <div class="kpi"><div class="l">Cash invested</div><div class="v" id="kCash">–</div></div>
+        </div>
+        <table id="plTable"></table>
+      </div>
+
+      <div class="panel">
+        <h3>Purchase decision</h3>
+        <div class="verdict" id="verdict"></div>
+        <ul class="checks" id="checks"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <section class="panel proj">
+    <h3>Five-year outlook</h3>
+    <div class="proj-wrap"><table id="projTable"></table></div>
+    <p class="help" style="margin:10px 0 8px">Assumes revenue and operating expenses both grow at the rent growth rate and value grows at the appreciation rate. Equity = projected value minus loan balance. Total return = cumulative cash flow plus equity gained, before selling costs and taxes. Return on cash = total return ÷ cash invested.</p>
+  </section>
+
+  <footer>
+    <div class="who">Prepared by Chris England, Broker · Compass · 843-345-2864 · <a href="mailto:chris@sequelsc.com">chris@sequelsc.com</a></div>
+    <p class="disclaimer">This calculator provides estimates for discussion purposes only and is not financial, tax, legal or investment advice. Results depend entirely on the inputs entered; actual rents, occupancy, expenses, insurance, property taxes, financing terms and rental regulations vary and should be independently verified. Short-term rental use may be restricted by local ordinance, zoning, HOA or POA covenants, and may require permits and business licenses. Consult a qualified lender, CPA and attorney before making investment decisions. Information is deemed reliable but not guaranteed.</p>
+  </footer>
+</div>
+
+<div class="mbar" id="mbar">
+  <div class="m">Cash flow <b id="mCF">–</b>/mo &nbsp;·&nbsp; CoC <b id="mCoC">–</b></div>
+  <button class="btn primary" id="mGo">See results</button>
+</div>
+
+<div class="print-gate">To print or save this analysis, please use the “Print / Save PDF” button on the page.</div>
+
+<dialog class="gate" id="gate" aria-labelledby="gateTitle">
+  <form id="gateForm" method="dialog" novalidate>
+    <h3 id="gateTitle">Save your analysis</h3>
+    <p class="sub" id="gateSub">Enter your name and email to print or save this analysis as a PDF.</p>
+    <div class="field"><div class="lab"><label for="g_name">Name</label></div><div class="ctl"><input id="g_name" autocomplete="name" required></div></div>
+    <div class="field"><div class="lab"><label for="g_email">Email</label></div><div class="ctl"><input id="g_email" type="email" autocomplete="email" inputmode="email" required></div></div>
+    <div class="field"><div class="lab"><label for="g_phone">Phone (optional)</label></div><div class="ctl"><input id="g_phone" type="tel" autocomplete="tel" inputmode="tel"></div></div>
+    <div class="hp" aria-hidden="true"><label>Leave this empty <input id="g_hp" tabindex="-1" autocomplete="off"></label></div>
+    <div class="err" id="gateErr" role="alert"></div>
+    <p class="consent">By continuing, you agree that Chris England, Broker with Compass, may contact you about real estate. Your information is not sold or shared.</p>
+    <div class="row">
+      <button type="button" class="btn" id="gateCancel">Cancel</button>
+      <button type="submit" class="btn primary" id="gateGo">Continue</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+  // ---------- Field definitions ----------
+  // type: usd | pct | num | text | yrs
+  // mode: both | ltr | str
+  var SECTIONS = [
+    { n:'02', title:'Property', fields:[
+      {id:'preparedFor', label:'Prepared for', type:'text', def:'', wide:true, mode:'both'},
+      {id:'address', label:'Street address', type:'text', def:'', wide:true, mode:'both', help:'Use “Find listing” to pull up beds, baths and square feet for homes currently listed for sale or rent.'},
+      {id:'area', label:'City / community', type:'text', def:'', mode:'both'},
+      {id:'beds', label:'Bedrooms', type:'num', def:3, mode:'both'},
+      {id:'baths', label:'Bathrooms', type:'num', def:2, mode:'both'},
+      {id:'sqft', label:'Square feet', type:'num', def:1800, mode:'both'}
+    ]},
+    { n:'03', title:'Purchase & financing', fields:[
+      {id:'price', label:'Purchase price', type:'usd', def:750000, mode:'both'},
+      {id:'arv', label:'After-repair value (optional)', type:'usd', def:0, mode:'both', help:'Leave at 0 if no renovation is planned.'},
+      {id:'rehab', label:'Renovation / CapEx at purchase', type:'usd', def:0, mode:'both'},
+      {id:'furnish', label:'Furnishing & setup', type:'usd', def:40000, mode:'str', help:'Furniture, linens, kitchen, photography.'},
+      {id:'closingPct', label:'Buyer closing costs', type:'pct', def:1.5, mode:'both'},
+      {id:'downPct', label:'Down payment', type:'pct', def:25, mode:'both', help:'Enter 100 for a cash purchase.'},
+      {id:'apr', label:'Interest rate', type:'pct', def:7.0, step:0.125, mode:'both'},
+      {id:'term', label:'Loan term', type:'yrs', def:30, mode:'both'},
+      {id:'loanFees', label:'Lender fees / points', type:'usd', def:0, mode:'both', help:'Paid in cash at closing.'}
+    ]},
+    { n:'04', title:'Rental income', fields:[
+      {id:'rent', label:'Monthly rent', type:'usd', def:3800, mode:'ltr'},
+      {id:'vacancy', label:'Vacancy allowance', type:'pct', def:5, mode:'ltr', help:'Share of the year the home sits empty between tenants.'},
+      {id:'adr', label:'Average nightly rate', type:'usd', def:425, mode:'str', help:'Blended across peak and off-season.'},
+      {id:'ownerNights', label:'Owner personal-use nights', type:'num', def:0, suffix:'nights', mode:'str', help:'Nights you block off for your own use each year.'},
+      {id:'occ', label:'Occupancy', type:'pct', def:55, mode:'str', help:'Booked nights ÷ nights available to rent.'},
+      {id:'stay', label:'Average stay length', type:'num', def:5, suffix:'nights', mode:'str'},
+      {id:'cleanFee', label:'Cleaning fee charged per stay', type:'usd', def:250, mode:'str'}
+    ]},
+    { n:'05', title:'Operating expenses', fields:[
+      {id:'millage', label:'Millage rate', type:'num', def:230, suffix:'mills', step:1, mode:'both', help:'Varies by tax district. Verify on the Beaufort County Auditor tax calculator.'},
+      {id:'taxOverride', label:'Known annual property tax (optional)', type:'usd', def:0, mode:'both', help:'If entered, replaces the millage calculation.'},
+      {id:'insurance', label:'Insurance (annual)', type:'usd', def:6500, mode:'both', help:'Homeowner/landlord policy plus wind and flood. Get a quote.'},
+      {id:'hoa', label:'HOA / POA dues (monthly)', type:'usd', def:150, mode:'both'},
+      {id:'pm', label:'Property management', type:'pct', def:8, mode:'ltr', help:'% of collected rent.'},
+      {id:'leasing', label:'Leasing / renewal fees', type:'pct', def:2.5, mode:'ltr', help:'% of collected rent, averaged across the year.'},
+      {id:'mgmt', label:'Vacation rental management', type:'pct', def:25, mode:'str', help:'% of nightly rental revenue.'},
+      {id:'platform', label:'Booking platform fees', type:'pct', def:8, mode:'str', help:'Blended % of gross revenue. Airbnb charges hosts 3% on split-fee listings and 15.5% under its host-only fee (standard for software-connected managers); direct bookings cost little. Ask your manager whether this is already inside their fee.'},
+      {id:'cleanCost', label:'Cleaning cost per stay', type:'usd', def:225, mode:'str'},
+      {id:'utilities', label:'Utilities, internet & streaming (monthly)', type:'usd', def:450, mode:'str'},
+      {id:'supplies', label:'Guest supplies & consumables', type:'pct', def:2, mode:'str', help:'% of gross revenue.'},
+      {id:'permits', label:'Rental permits & business licenses (annual)', type:'usd', def:500, mode:'str'},
+      {id:'repairs', label:'Repairs & maintenance', type:'pct', def:5.5, mode:'both', help:'% of collected revenue.'},
+      {id:'other', label:'Other (monthly)', type:'usd', def:0, mode:'both', help:'Pest control, landscaping, pool, etc.'}
+    ]},
+    { n:'06', title:'Reserves & growth', fields:[
+      {id:'capex', label:'Capital reserve', type:'pct', def:5, mode:'both', help:'Roof, HVAC, appliances. % of collected revenue.'},
+      {id:'turn', label:'Tenant turnover reserve', type:'pct', def:6.5, mode:'ltr', help:'Paint, cleaning, make-ready between tenants.'},
+      {id:'appr', label:'Annual appreciation', type:'pct', def:2.5, mode:'both'},
+      {id:'growth', label:'Annual rent & expense growth', type:'pct', def:2.5, mode:'both'}
+    ]},
+    { n:'07', title:'Your targets', fields:[
+      {id:'tCap', label:'Minimum cap rate', type:'pct', def:6, mode:'both'},
+      {id:'tCoC', label:'Minimum cash-on-cash', type:'pct', def:8, mode:'both'},
+      {id:'tCF', label:'Minimum monthly cash flow', type:'usd', def:250, mode:'both'},
+      {id:'tDSCR', label:'Minimum debt coverage (DSCR)', type:'num', def:1.25, step:0.05, mode:'both', help:'Many investor (DSCR) loans require 1.0–1.25.'},
+      {id:'tARV', label:'Max all-in cost as % of ARV', type:'pct', def:93, mode:'both', help:'Only checked when an after-repair value is entered.'}
+    ]}
+  ];
+
+  var TIPS = {
+    preparedFor:'Optional. The name of the buyer or investor this analysis is for. It prints at the top of the saved PDF. Leave blank if it\'s just for you.',
+    address:'Optional. Type the street number and name (e.g. 225 S Sea Pines Drive). If the home is currently listed, tap “Find listing” to open it on sequelsc.com and copy the beds, baths and square feet back here.',
+    area:'Optional. The town or community, such as Sea Pines, Palmetto Dunes or Bluffton. For your reference only; it doesn\'t change the math.',
+    beds:'Number of bedrooms. For your reference only; it doesn\'t change the math.',
+    baths:'Number of bathrooms (e.g. 2.5). For your reference only.',
+    sqft:'Heated square footage. For your reference only.',
+    price:'The price you expect to pay, not the list price. Drives the loan, property tax, closing costs and cap rate.',
+    arv:'After-repair value: what the home should be worth once any renovation is done. Leave at 0 if you are not renovating. When entered, it\'s used for the 5-year value and the ARV check.',
+    rehab:'Cash you\'ll spend on renovation or big-ticket updates right after closing. Leave at 0 if the home is move-in ready. Added to your cash invested.',
+    furnish:'One-time cost to furnish and set up a vacation rental: furniture, linens, kitchenware, décor and listing photos. Leave at 0 if it sells furnished and ready to rent.',
+    closingPct:'Your buyer-side closing costs as a % of price (title, attorney, recording, prepaid items). 1–2% is typical. Lender fees go in their own field.',
+    downPct:'Your down payment as a % of price. Investment loans usually need 20–25%. Enter 100 for an all-cash purchase; the loan fields are then ignored.',
+    apr:'The annual interest rate on the loan. Ask your lender for a current investment-property rate; it\'s often higher than a primary-home rate.',
+    term:'Length of the loan in years, usually 30.',
+    loanFees:'Origination fees or points paid to the lender at closing. Leave at 0 if unknown or if they\'re included in closing costs.',
+    rent:'Expected monthly rent on a 12-month lease. Use comparable rentals or a property manager\'s estimate.',
+    vacancy:'The share of the year you expect the home to sit empty between tenants. 5% is about 2½ weeks a year.',
+    adr:'Average nightly rate across the whole year, blending peak summer and slower winter weeks. A vacation rental manager can give you this for similar homes.',
+    ownerNights:'Nights each year you\'ll block off for your own family\'s use. These nights earn nothing. Leave at 0 if it will be rented full time.',
+    occ:'The share of available nights you expect to be booked. 55% means about 200 booked nights a year. Ask a local manager for comparable homes.',
+    stay:'The typical booking length in nights. Used to count stays, which drives cleaning fees and cleaning costs. Summer weekly rentals are about 7; off-season is often 3–4.',
+    cleanFee:'The cleaning fee guests pay per booking. Counts as income.',
+    millage:'The local tax rate in mills. Rentals in SC are taxed at 6% of value × millage ÷ 1,000. Rates differ by district; check the Beaufort County Auditor\'s tax calculator. Ignored if you enter a known tax amount below.',
+    taxOverride:'If you know the actual annual tax for this home as a rental, enter it here and it replaces the millage estimate. Leave at 0 to use the estimate. Note: a tax bill at the 4% owner-occupied rate will be too low for a rental.',
+    insurance:'Total yearly insurance: homeowner or landlord policy plus wind/hail and flood. Near the coast this varies a lot, so get a real quote.',
+    hoa:'Monthly HOA, POA or regime dues. Leave at 0 if there are none. If dues are paid yearly or quarterly, convert to a monthly amount.',
+    pm:'Monthly management fee as a % of rent collected, typically 8–10%. Enter 0 if you\'ll manage it yourself.',
+    leasing:'Fees for placing a new tenant or renewing a lease, spread across the year as a % of rent. Enter 0 if your manager doesn\'t charge them.',
+    mgmt:'The vacation rental company\'s commission as a % of nightly revenue, typically 20–35% on Hilton Head. Enter 0 if you\'ll self-manage.',
+    platform:'Fees charged by Airbnb, VRBO and similar sites, as a blended % of gross revenue. Enter 0 if your manager\'s fee already includes them.',
+    cleanCost:'What you pay the cleaning crew per turnover. Often close to the cleaning fee guests pay.',
+    utilities:'Monthly cost of electric, water, internet, cable or streaming and trash. The owner pays these on a vacation rental.',
+    supplies:'Toilet paper, soap, coffee, linens replacement and other guest items, as a % of revenue.',
+    permits:'Yearly cost of the town short-term rental permit, business licenses and similar filings. Check with the town for current fees.',
+    repairs:'Routine repairs and upkeep as a % of revenue collected: plumbing calls, appliance fixes, touch-ups.',
+    other:'Any other monthly costs you pay: pest control, landscaping, pool service, security. Leave at 0 if none.',
+    capex:'Money set aside each year for big replacements such as roof, HVAC, water heater and appliances, as a % of revenue. Not a monthly bill, but it will come due.',
+    turn:'Money set aside for cleaning, paint and repairs between tenants, as a % of rent.',
+    appr:'How much you expect the home\'s value to grow each year. Used only for the 5-year outlook.',
+    growth:'How much you expect rents and expenses to rise each year. Used only for the 5-year outlook.',
+    tCap:'The lowest cap rate you\'d accept. Cap rate = yearly net operating income ÷ price, ignoring the loan.',
+    tCoC:'The lowest cash-on-cash return you\'d accept. Cash-on-cash = yearly cash flow after the mortgage ÷ the cash you put in.',
+    tCF:'The lowest monthly profit, after all expenses and the mortgage, that you\'d accept.',
+    tDSCR:'Debt coverage = net operating income ÷ mortgage payments. 1.25 means income covers the loan 1.25 times. Many investor loans require 1.0–1.25.',
+    tARV:'The most you\'d pay (price + renovation) as a % of after-repair value. Only checked when an ARV is entered.'
+  };
+
+  var FIELDS = {};
+  SECTIONS.forEach(function(s){ s.fields.forEach(function(f){ FIELDS[f.id]=f; }); });
+
+  var state = { mode:'ltr' };
+  Object.keys(FIELDS).forEach(function(k){ state[k]=FIELDS[k].def; });
+
+  // ---------- Render inputs ----------
+  var host = document.getElementById('inputs');
+  SECTIONS.forEach(function(s){
+    var sec = document.createElement('section');
+    sec.innerHTML = '<div class="stop"><span class="num">'+s.n+'</span><h2>'+s.title+'</h2></div>';
+    var grid = document.createElement('div'); grid.className='grid';
+    s.fields.forEach(function(f){
+      var w = document.createElement('div');
+      w.className = 'field'+(f.wide?' wide':'');
+      w.dataset.mode = f.mode;
+      var pre = f.type==='usd' ? '<span>$</span>' : '';
+      var suf = f.type==='pct' ? '<span class="suf">%</span>' : (f.type==='yrs' ? '<span class="suf">years</span>' : (f.suffix ? '<span class="suf">'+f.suffix+'</span>' : ''));
+      var inputType = (f.type==='text' || f.type==='usd') ? 'text' : 'number';
+      var step = f.step || (f.type==='usd' ? 1 : (f.type==='pct' ? 0.1 : 1));
+      var tip = TIPS[f.id];
+      w.innerHTML = '<div class="lab"><label for="f_'+f.id+'">'+f.label+'</label>'+
+        (tip ? '<button type="button" class="q" aria-label="What is '+f.label+'?" aria-expanded="false" aria-controls="t_'+f.id+'">?</button>' : '')+'</div>'+
+        (tip ? '<div class="pop" id="t_'+f.id+'" role="tooltip">'+tip+'</div>' : '')+
+        '<div class="ctl">'+pre+'<input id="f_'+f.id+'" type="'+inputType+'" '+(inputType==='number'?'inputmode="decimal" step="'+step+'" min="0"':(f.type==='usd'?'inputmode="decimal" autocomplete="off"':''))+'>'+suf+'</div>'+
+        '';
+      grid.appendChild(w);
+    });
+    sec.appendChild(grid);
+    if (s.n==='05') {
+      var n = document.createElement('div'); n.className='note';
+      n.innerHTML = '<b>South Carolina property tax:</b> rental and second homes are assessed at 6% of value (primary residences at 4%), and the value generally resets to the purchase price after a sale. Estimated tax = price × 6% × millage ÷ 1,000.';
+      sec.appendChild(n);
+      var n2 = document.createElement('div'); n2.className='note str-only';
+      n2.innerHTML = '<b>Accommodations taxes</b> are collected from guests on top of the nightly rate and passed through to the state, county and town, so they are not modeled as income or expense here. Confirm short-term rental permitting and any HOA/POA rental restrictions before you buy.';
+      sec.appendChild(n2);
+    }
+    host.appendChild(sec);
+  });
+
+  // ---------- Help popovers ----------
+  var openPop=null;
+  function closePop(){ if(!openPop) return; openPop.pop.classList.remove('open'); openPop.btn.setAttribute('aria-expanded','false'); openPop=null; }
+  host.addEventListener('click', function(e){
+    var b=e.target.closest('.q'); if(!b) return;
+    e.preventDefault(); e.stopPropagation();
+    var pop=document.getElementById(b.getAttribute('aria-controls'));
+    if (openPop && openPop.btn===b){ closePop(); return; }
+    closePop();
+    var field=b.closest('.field');
+    pop.style.setProperty('--arrow', Math.max(b.offsetLeft+3, 8)+'px');
+    pop.classList.add('open'); b.setAttribute('aria-expanded','true'); openPop={btn:b,pop:pop};
+  });
+  document.addEventListener('click', function(e){ if(openPop && !e.target.closest('.pop')) closePop(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ var b=openPop&&openPop.btn; closePop(); if(b) b.focus(); } });
+
+  // ---------- Listing lookup on sequelsc.com ----------
+  var SEARCH_URL = 'https://search.sequelsc.com/idx/results/listings?aw_address=';
+  (function(){
+    var input = document.getElementById('f_address');
+    var a = document.createElement('a');
+    a.className='find no-print'; a.target='_blank'; a.rel='noopener'; a.textContent='Find listing ↗';
+    input.parentNode.appendChild(a);
+    function sync(){
+      var q = input.value.trim().replace(/\s+/g,' ');
+      if (q.length>=3){ a.href = SEARCH_URL+encodeURIComponent(q); a.removeAttribute('aria-disabled'); a.removeAttribute('tabindex'); }
+      else { a.removeAttribute('href'); a.setAttribute('aria-disabled','true'); a.setAttribute('tabindex','-1'); }
+    }
+    input.addEventListener('input', sync);
+    window.__syncFind = sync;
+  })();
+
+  // ---------- State <-> UI ----------
+  function readUI(){
+    Object.keys(FIELDS).forEach(function(k){
+      var el = document.getElementById('f_'+k);
+      if (FIELDS[k].type==='text') state[k]=el.value;
+      else { var v=parseFloat(String(el.value).replace(/[^0-9.]/g,'')); state[k]=isFinite(v)?v:0; }
+    });
+  }
+  function fmtUSDInput(v){ return (+v||0).toLocaleString('en-US',{maximumFractionDigits:2}); }
+  function writeUI(){
+    Object.keys(FIELDS).forEach(function(k){
+      document.getElementById('f_'+k).value = FIELDS[k].type==='usd' ? fmtUSDInput(state[k]) : state[k];
+    });
+    applyMode();
+    if (window.__syncFind) window.__syncFind();
+  }
+  function applyMode(){
+    document.querySelectorAll('.mode').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.mode===state.mode ? 'true':'false'); });
+    document.querySelectorAll('#inputs .field').forEach(function(w){
+      var m=w.dataset.mode; w.classList.toggle('hidden', !(m==='both'||m===state.mode));
+    });
+    document.querySelectorAll('.str-only').forEach(function(e){ e.classList.toggle('hidden', state.mode!=='str'); });
+    document.getElementById('resTitle').textContent = 'Year-one results · '+(state.mode==='ltr'?'Long-term':'Short-term');
+  }
+
+  // ---------- Math ----------
+  function pmt(L, aprPct, years){
+    if (L<=0 || years<=0) return 0;
+    var r = aprPct/100/12, n = years*12;
+    if (r===0) return L/n;
+    return L*r/(1-Math.pow(1+r,-n));
+  }
+  function balance(L, aprPct, years, monthsPaid){
+    if (L<=0) return 0;
+    var r = aprPct/100/12, n=years*12, p=pmt(L,aprPct,years);
+    if (monthsPaid>=n) return 0;
+    if (r===0) return L - p*monthsPaid;
+    return L*Math.pow(1+r,monthsPaid) - p*(Math.pow(1+r,monthsPaid)-1)/r;
+  }
+
+  function compute(s){
+    var pc=function(x){return (x||0)/100;};
+    var price=s.price, down=Math.min(Math.max(pc(s.downPct),0),1);
+    var loan = price*(1-down);
+    var closing = price*pc(s.closingPct);
+    var furnish = s.mode==='str' ? s.furnish : 0;
+    var cashIn = price*down + closing + s.loanFees + s.rehab + furnish;
+    var debtM = pmt(loan, s.apr, s.term);
+    var tax = s.taxOverride>0 ? s.taxOverride : price*0.06*s.millage/1000;
+
+    var lines = []; // {label, annual, kind: 'rev'|'exp'|'res'}
+    var gross, collected;
+    if (s.mode==='ltr'){
+      gross = s.rent*12;
+      var vac = gross*pc(s.vacancy);
+      collected = gross - vac;
+      lines.push({sect:'Income'});
+      lines.push({label:'Gross rent', a:gross});
+      lines.push({label:'Vacancy', a:-vac});
+      lines.push({label:'Collected rent', a:collected, cls:'sub'});
+      lines.push({sect:'Operating expenses'});
+      var opex = [
+        ['Property tax', tax],
+        ['Insurance', s.insurance],
+        ['HOA / POA', s.hoa*12],
+        ['Property management', collected*pc(s.pm)],
+        ['Leasing / renewal', collected*pc(s.leasing)],
+        ['Repairs & maintenance', collected*pc(s.repairs)],
+        ['Other', s.other*12]
+      ];
+      var reserves = [['Capital reserve', collected*pc(s.capex)], ['Turnover reserve', collected*pc(s.turn)]];
+    } else {
+      var avail = Math.max(365 - Math.min(s.ownerNights||0,365), 0);
+      var nights = avail*Math.min(pc(s.occ),1);
+      var roomRev = nights*s.adr;
+      var stays = s.stay>0 ? nights/s.stay : 0;
+      var cleanRev = stays*s.cleanFee;
+      gross = roomRev + cleanRev; collected = gross;
+      lines.push({sect:'Income'});
+      lines.push({label:'Nightly revenue ('+Math.round(nights)+' nights)', a:roomRev});
+      lines.push({label:'Cleaning fees ('+Math.round(stays)+' stays)', a:cleanRev});
+      lines.push({label:'Gross revenue', a:gross, cls:'sub'});
+      lines.push({sect:'Operating expenses'});
+      var opex = [
+        ['Property tax', tax],
+        ['Insurance', s.insurance],
+        ['HOA / POA', s.hoa*12],
+        ['Rental management', roomRev*pc(s.mgmt)],
+        ['Platform fees', gross*pc(s.platform)],
+        ['Cleaning', stays*s.cleanCost],
+        ['Utilities & internet', s.utilities*12],
+        ['Guest supplies', gross*pc(s.supplies)],
+        ['Permits & licenses', s.permits],
+        ['Repairs & maintenance', gross*pc(s.repairs)],
+        ['Other', s.other*12]
+      ];
+      var reserves = [['Capital reserve', gross*pc(s.capex)]];
+    }
+    var opexTotal=0; opex.forEach(function(o){ opexTotal+=o[1]; lines.push({label:o[0], a:-o[1]}); });
+    lines.push({label:'Total operating expenses', a:-opexTotal, cls:'sub'});
+    var noi = collected - opexTotal;
+    lines.push({label:'Net operating income', a:noi, cls:'sub'});
+    lines.push({sect:'Reserves & debt'});
+    var resTotal=0; reserves.forEach(function(o){ resTotal+=o[1]; lines.push({label:o[0], a:-o[1]}); });
+    lines.push({label:'Mortgage (principal & interest)', a:-debtM*12});
+    var cf = noi - resTotal - debtM*12;
+    lines.push({label:'Cash flow', a:cf, cls:'total'});
+
+    var allIn = price + s.rehab + closing;
+    return {
+      lines:lines, noi:noi, cf:cf, cashIn:cashIn, loan:loan, debtM:debtM, tax:tax,
+      opexTotal:opexTotal, resTotal:resTotal, collected:collected,
+      cap: price>0 ? noi/price : 0,
+      coc: cashIn>0 ? cf/cashIn : 0,
+      dscr: debtM>0 ? noi/(debtM*12) : null,
+      arvRatio: s.arv>0 ? (price+s.rehab)/s.arv : null
+    };
+  }
+
+  // Break-even: CF is linear in rent (LTR) or occupancy (STR)
+  function breakEven(s){
+    var key = s.mode==='ltr' ? 'rent' : 'occ';
+    var a = Object.assign({}, s); a[key]=0;
+    var b = Object.assign({}, s); b[key]= s.mode==='ltr' ? 10000 : 100;
+    var ca = compute(a).cf, cb = compute(b).cf;
+    if (cb===ca) return null;
+    var x = -ca*(b[key])/(cb-ca);
+    return {key:key, x:x};
+  }
+
+  // ---------- Formatting ----------
+  function usd(x, dp){ var neg=x<0; var v=Math.abs(x).toLocaleString('en-US',{maximumFractionDigits:dp||0,minimumFractionDigits:dp||0}); return (neg?'−$':'$')+v; }
+  function pct(x, dp){ var t=(Math.abs(x)*100).toFixed(dp==null?1:dp)+'%'; return (x<0 && parseFloat(t)!==0 ? '−' : '')+t; }
+
+  // ---------- Render results ----------
+  function render(){
+    var s=state, r=compute(s);
+    var kCF=document.getElementById('kCF');
+    kCF.textContent = usd(r.cf/12); kCF.classList.toggle('neg', r.cf<0);
+    var kCoC=document.getElementById('kCoC');
+    kCoC.textContent = pct(r.coc); kCoC.classList.toggle('neg', r.coc<0);
+    document.getElementById('kCap').textContent = pct(r.cap, 2);
+    document.getElementById('kCash').textContent = usd(r.cashIn);
+    var mCF=document.getElementById('mCF'); mCF.textContent=usd(r.cf/12); mCF.classList.toggle('neg', r.cf<0);
+    var mC=document.getElementById('mCoC'); mC.textContent=pct(r.coc); mC.classList.toggle('neg', r.coc<0);
+
+    var h='<tr><th></th><th>Monthly</th><th>Annual</th></tr>';
+    r.lines.forEach(function(l){
+      if (l.sect){ h+='<tr class="sect"><td colspan="3">'+l.sect+'</td></tr>'; return; }
+      var c = l.a<0 && (l.cls==='total') ? ' neg' : '';
+      h+='<tr class="'+(l.cls||'')+'"><td>'+l.label+'</td><td class="'+c+'">'+usd(l.a/12)+'</td><td class="'+c+'">'+usd(l.a)+'</td></tr>';
+    });
+    document.getElementById('plTable').innerHTML=h;
+
+    // Checks
+    var checks=[];
+    function add(label, val, ok){ checks.push({label:label, val:val, ok:ok}); }
+    add('Cap rate '+pct(r.cap,2)+' vs '+s.tCap+'% target', null, r.cap >= s.tCap/100);
+    add('Cash-on-cash '+pct(r.coc)+' vs '+s.tCoC+'% target', null, r.coc >= s.tCoC/100);
+    add('Monthly cash flow '+usd(r.cf/12)+' vs '+usd(s.tCF)+' target', null, r.cf/12 >= s.tCF);
+    if (r.dscr!==null) add('Debt coverage '+r.dscr.toFixed(2)+'× vs '+s.tDSCR+'× target', null, r.dscr >= s.tDSCR);
+    else add('Debt coverage — no loan', null, 'na');
+    if (r.arvRatio!==null) add('All-in cost '+pct(r.arvRatio)+' of ARV vs '+s.tARV+'% max', null, r.arvRatio <= s.tARV/100);
+    else add('ARV check — no after-repair value entered', null, 'na');
+
+    var ch='', passed=0, counted=0;
+    checks.forEach(function(c){
+      var cls = c.ok==='na' ? 'na' : (c.ok?'y':'n');
+      var txt = c.ok==='na' ? 'N/A' : (c.ok?'Meets':'Misses');
+      if (c.ok!=='na'){ counted++; if(c.ok) passed++; }
+      ch+='<li><span>'+c.label+'</span><span class="chip '+cls+'">'+txt+'</span></li>';
+    });
+    var be = breakEven(s), beTxt='';
+    if (be){
+      if (be.key==='rent') beTxt = 'Break-even rent: <b>'+usd(Math.max(be.x,0))+'/mo</b>.';
+      else beTxt = be.x>100 ? 'Does not break even at 100% occupancy.' : 'Break-even occupancy: <b>'+Math.max(be.x,0).toFixed(0)+'%</b> ('+Math.round(Math.max(be.x,0)/100*Math.max(365-Math.min(s.ownerNights||0,365),0))+' nights).';
+    }
+    ch+='<li><span>'+beTxt+'</span><span></span></li>';
+    document.getElementById('checks').innerHTML=ch;
+
+    var v=document.getElementById('verdict');
+    if (passed===counted){ v.style.background='var(--good-bg)'; v.style.color='var(--good)'; v.textContent='Meets all '+counted+' of your targets.'; }
+    else if (passed===0){ v.style.background='var(--bad-bg)'; v.style.color='var(--bad)'; v.textContent='Misses all '+counted+' of your targets at these inputs.'; }
+    else { v.style.background='var(--neutral-bg)'; v.style.color='var(--ink)'; v.textContent='Meets '+passed+' of '+counted+' targets. Review the misses below.'; }
+
+    // Projection
+    var g=s.growth/100, ap=s.appr/100;
+    var startVal = s.arv>0 ? s.arv : s.price;
+    var cum=0, ph='<tr><th>Year</th><th>Cash flow</th><th>Value</th><th>Loan balance</th><th>Equity</th><th>Total return</th><th>Return on cash</th></tr>';
+    var initialEquity = s.price - r.loan;
+    for (var y=1;y<=5;y++){
+      var f=Math.pow(1+g,y-1);
+      var cfy = (r.noi - r.resTotal)*f - r.debtM*12;
+      cum+=cfy;
+      var val = startVal*Math.pow(1+ap,y);
+      var bal = balance(r.loan, s.apr, s.term, y*12);
+      var eq = val-bal;
+      var tot = cum + (eq - initialEquity);
+      ph+='<tr><td>'+y+'</td><td class="'+(cfy<0?'neg':'')+'">'+usd(cfy)+'</td><td>'+usd(val)+'</td><td>'+usd(bal)+'</td><td>'+usd(eq)+'</td><td class="'+(tot<0?'neg':'')+'">'+usd(tot)+'</td><td class="'+(tot<0?'neg':'')+'">'+(r.cashIn>0?pct(tot/r.cashIn,0):'–')+'</td></tr>';
+    }
+    document.getElementById('projTable').innerHTML=ph;
+  }
+
+  // ---------- Link sharing ----------
+  function toHash(){
+    var o={m:state.mode};
+    Object.keys(FIELDS).forEach(function(k){ if (state[k]!==FIELDS[k].def) o[k]=state[k]; });
+    return '#'+encodeURIComponent(JSON.stringify(o));
+  }
+  function fromHash(){
+    try{
+      if (!location.hash || location.hash.length<3) return;
+      var o=JSON.parse(decodeURIComponent(location.hash.slice(1)));
+      if (o.m==='ltr'||o.m==='str') state.mode=o.m;
+      Object.keys(o).forEach(function(k){
+        if (!FIELDS[k]) return;
+        if (FIELDS[k].type==='text') state[k]=String(o[k]).slice(0,200);
+        else { var v=parseFloat(o[k]); if (isFinite(v)) state[k]=v; }
+      });
+    }catch(e){}
+  }
+
+  // ---------- Events ----------
+  host.addEventListener('focusout', function(e){
+    var id=(e.target.id||'').replace('f_',''); if (FIELDS[id] && FIELDS[id].type==='usd') e.target.value=fmtUSDInput(state[id]);
+  });
+  host.addEventListener('input', function(){ readUI(); render(); try{ history.replaceState(null,'',toHash()); }catch(e){} });
+  document.querySelectorAll('.mode').forEach(function(b){
+    b.addEventListener('click', function(){ state.mode=b.dataset.mode; applyMode(); render(); try{ history.replaceState(null,'',toHash()); }catch(e){} });
+  });
+  document.getElementById('mGo').addEventListener('click', function(){ document.querySelector('.results').scrollIntoView({behavior:'smooth'}); });
+  // ---------- Lead capture ----------
+  // Paste your Google Apps Script web app URL (or a Zapier "Catch Hook" URL) between the quotes.
+  // Leave empty and printing works with no sign-in, and nothing is sent anywhere.
+  var LEAD_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxIj9my1NlsDn0dzY6EsjqcuEn5Gm-x-gN9iphTEuF78yxk3CnivJUbppepbGEvCy-F/exec';
+
+  var gate=document.getElementById('gate'), gateMode='print';
+  if (LEAD_ENDPOINT){ document.body.classList.add('gated'); document.getElementById('btnEmail').classList.remove('hidden'); }
+  function getLead(){ try{ return JSON.parse(localStorage.getItem('rai_lead')||'null'); }catch(e){ return null; } }
+  function saveLead(l){ try{ localStorage.setItem('rai_lead', JSON.stringify(l)); }catch(e){} }
+  function toast(msg){ var t=document.createElement('div'); t.className='toast'; t.setAttribute('role','status'); t.textContent=msg; document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 4500); }
+  function sendLead(event, lead){
+    if (!LEAD_ENDPOINT) return;
+    var r=compute(state);
+    var payload={
+      event:event, name:lead.name, email:lead.email, phone:lead.phone||'', hp:lead.hp||'',
+      mode: state.mode==='ltr'?'Long-term':'Short-term',
+      preparedFor:state.preparedFor, address:state.address, area:state.area,
+      price:state.price, rent: state.mode==='ltr'?state.rent:null, adr: state.mode==='str'?state.adr:null, occupancy: state.mode==='str'?state.occ:null,
+      monthlyCashFlow:Math.round(r.cf/12), cashOnCash:+(r.coc*100).toFixed(1), capRate:+(r.cap*100).toFixed(2), cashInvested:Math.round(r.cashIn),
+      lines:r.lines.filter(function(l){return !l.sect;}).map(function(l){return [l.label, Math.round(l.a)];}),
+      link: location.href.split('#')[0]+toHash(),
+      page: location.href.split('#')[0]
+    };
+    try{
+      fetch(LEAD_ENDPOINT,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}).catch(function(){});
+    }catch(e){}
+  }
+  function doPrint(){ document.body.classList.add('unlocked'); setTimeout(function(){ window.print(); }, 50); }
+  window.addEventListener('afterprint', function(){ document.body.classList.remove('unlocked'); });
+
+  function openGate(mode){
+    gateMode=mode;
+    var l=getLead()||{};
+    document.getElementById('g_name').value=l.name||'';
+    document.getElementById('g_email').value=l.email||'';
+    document.getElementById('g_phone').value=l.phone||'';
+    document.getElementById('gateErr').textContent='';
+    document.getElementById('gateTitle').textContent = mode==='email' ? 'Email this analysis' : 'Save your analysis';
+    document.getElementById('gateSub').textContent = mode==='email' ? 'We’ll send a summary and a link back to these exact numbers.' : 'Enter your name and email to print or save this analysis as a PDF.';
+    document.getElementById('gateGo').textContent = mode==='email' ? 'Send' : 'Continue to print';
+    try{ gate.showModal(); }catch(e){ gate.setAttribute('open',''); }
+    setTimeout(function(){ document.getElementById(l.name?'g_email':'g_name').focus(); }, 30);
+  }
+  document.getElementById('gateCancel').addEventListener('click', function(){ gate.close(); });
+  document.getElementById('gateForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var lead={ name:document.getElementById('g_name').value.trim(), email:document.getElementById('g_email').value.trim(),
+               phone:document.getElementById('g_phone').value.trim(), hp:document.getElementById('g_hp').value };
+    var err=document.getElementById('gateErr');
+    if (lead.name.length<2){ err.textContent='Please enter your name.'; return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(lead.email)){ err.textContent='Please enter a valid email address.'; return; }
+    saveLead({name:lead.name,email:lead.email,phone:lead.phone});
+    if (!state.preparedFor){ state.preparedFor=lead.name; document.getElementById('f_preparedFor').value=lead.name; }
+    sendLead(gateMode, lead);
+    gate.close();
+    if (gateMode==='email') toast('On its way to '+lead.email+'. Check spam if you don’t see it in a few minutes.');
+    else doPrint();
+  });
+
+  document.getElementById('btnEmail').addEventListener('click', function(){ openGate('email'); });
+  document.getElementById('btnPrint').addEventListener('click', function(){
+    if (!LEAD_ENDPOINT){ doPrint(); return; }
+    var l=getLead();
+    if (l && l.email){ sendLead('print', l); doPrint(); }
+    else openGate('print');
+  });
+  document.getElementById('btnReset').addEventListener('click', function(){
+    var m=state.mode;
+    Object.keys(FIELDS).forEach(function(k){ state[k]=FIELDS[k].def; });
+    state.mode=m; writeUI(); render();
+    try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+  });
+  document.getElementById('btnLink').addEventListener('click', function(){
+    var url = location.href.split('#')[0]+toHash();
+    var done=function(){ var c=document.getElementById('copied'); c.classList.remove('hidden'); setTimeout(function(){c.classList.add('hidden');},2000); };
+    try{
+      navigator.clipboard.writeText(url).then(done, function(){ fallback(url); done(); });
+    }catch(e){ fallback(url); done(); }
+  });
+  function fallback(t){
+    var ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  fromHash();
+  writeUI();
+  render();
+})();
+</script>
+</body>
+</html>
