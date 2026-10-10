@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spec Build Analysis · Partner Model</title>
+<meta name="description" content="Pricing and profit analysis for speculative custom home builds and small subdivisions, including shared cost allocation, investor preferred return and profit split.">
+<style>
+
+  :root{
+    --bg:#f8f7f3; --card:#fffefb; --ink:#1f1d1a; --muted:#6b665e; --rule:#e4e0d6;
+    --accent:#2f5d50; --accent-soft:#e7efe9; --good:#2f6b3f; --good-bg:#e6f0e7;
+    --bad:#a2402e; --bad-bg:#f6e6e1; --neutral-bg:#efece4;
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45}
+  a{color:var(--accent)}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 16px 64px}
+
+  /* Brand header */
+  .brand{background:#1b1a18;color:#fff}
+  .brand-in{max-width:1180px;margin:0 auto;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand-l,.brand-r{display:flex;align-items:center;gap:14px;text-decoration:none;color:#fff;min-width:0}
+  .brand img{display:block;height:38px;width:auto;mix-blend-mode:screen}
+  .brand .logo-compass{height:32px}
+  .brand .sep{width:1px;height:28px;background:rgba(255,255,255,.28)}
+  .brand .fallback{display:none;font-family:var(--serif);font-size:20px;letter-spacing:.14em;text-transform:uppercase}
+  .brand .broker{font-size:12.5px;color:rgba(255,255,255,.72);white-space:nowrap}
+  @media (max-width:560px){ .brand img{height:30px} .brand .logo-compass{height:24px} .brand .broker{display:none} }
+  .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .back{font-size:13px;color:var(--muted);text-decoration:none}
+  .back:hover{color:var(--accent)}
+  h1{font-family:var(--serif);font-weight:normal;font-size:34px;letter-spacing:-.01em;margin:6px 0 4px}
+  .lede{color:var(--muted);max-width:680px;margin:0 0 26px}
+
+  /* Stop headers */
+  .stop{display:flex;align-items:baseline;gap:12px;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
+  .stop .num{font-family:var(--serif);font-size:13px;color:var(--accent);letter-spacing:.08em}
+  .stop h2{font-family:var(--serif);font-weight:normal;font-size:21px;margin:0}
+
+  /* Mode picker */
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:30px}
+  .mode{all:unset;cursor:pointer;position:relative;background:#1b1a18;color:#fff;border-radius:12px;padding:18px 20px;transition:box-shadow .15s, transform .1s, opacity .15s;opacity:.62}
+  .mode:hover{opacity:.85}
+  .mode:active{transform:scale(.99)}
+  .mode:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .mode[aria-pressed="true"]{opacity:1;box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--accent)}
+  .mode .tag{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+  .mode .t{font-family:var(--serif);font-size:20px;margin:4px 0 4px;color:#fff}
+  .mode .d{color:rgba(255,255,255,.72);font-size:13.5px}
+  .mode .chk{position:absolute;top:14px;right:16px;width:22px;height:22px;border-radius:50%;border:1.5px solid rgba(255,255,255,.45);display:flex;align-items:center;justify-content:center;font-size:13px;color:transparent}
+  .mode[aria-pressed="true"] .chk{background:#fff;border-color:#fff;color:#1b1a18}
+
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:28px;align-items:start}
+  .inputs,.results{min-width:0}
+  .inputs section{margin-bottom:28px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+  .field{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .field.wide{grid-column:1/-1}
+  .field{position:relative}
+  .field label{font-size:12.5px;color:var(--muted)}
+  .lab{display:flex;align-items:center;gap:6px;min-height:18px}
+  .q{all:unset;cursor:pointer;width:16px;height:16px;border-radius:50%;border:1px solid #bdb7aa;color:var(--muted);font-size:10.5px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;flex:none;line-height:1}
+  .q:hover,.q[aria-expanded="true"]{background:#1b1a18;border-color:#1b1a18;color:#fff}
+  .q:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .pop{display:none;position:absolute;z-index:20;left:0;top:24px;width:min(300px,100%);background:#1b1a18;color:#fff;font-size:12.5px;line-height:1.45;padding:10px 12px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+  .pop.open{display:block}
+  .pop::before{content:"";position:absolute;top:-5px;left:var(--arrow,40px);width:10px;height:10px;background:#1b1a18;transform:rotate(45deg)}
+  .ctl{display:flex;align-items:center;background:var(--card);border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+  .ctl:focus-within{border-color:var(--accent)}
+  .ctl span{padding:0 0 0 10px;color:var(--muted);font-size:14px}
+  .ctl span.suf{padding:0 10px 0 0}
+  .ctl input,.ctl select{all:unset;flex:1;min-width:0;padding:9px 10px;font-size:15px;font-variant-numeric:tabular-nums}
+  .help{font-size:12px;color:var(--muted)}
+  .find{all:unset;cursor:pointer;white-space:nowrap;font-size:13px;padding:0 14px;align-self:stretch;display:flex;align-items:center;background:#1b1a18;color:#fff}
+  .find[aria-disabled="true"]{opacity:.35;cursor:default}
+  .find:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .note{font-size:13px;color:var(--muted);background:var(--neutral-bg);border-radius:8px;padding:10px 12px;margin-top:12px}
+  .note b{color:var(--ink);font-weight:600}
+
+  /* Results */
+  .results{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto;overscroll-behavior:contain;padding-right:2px}
+  .panel{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:18px 18px 8px;margin-bottom:14px}
+  .panel h3{font-family:var(--serif);font-weight:normal;font-size:17px;margin:0 0 12px}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+  .kpi{background:var(--bg);border-radius:8px;padding:10px 12px}
+  .kpi .l{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .kpi .v{font-size:22px;font-variant-numeric:tabular-nums;margin-top:2px}
+  .kpi .v.neg{color:var(--bad)}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13.5px}
+  td,th{padding:6px 0;border-bottom:1px solid var(--rule);text-align:right}
+  td:first-child,th:first-child{text-align:left;color:var(--ink)}
+  th{font-weight:normal;color:var(--muted);font-size:12px}
+  tr.sub td{font-weight:600}
+  tr.total td{font-weight:600;border-bottom:none}
+  tr.sect td{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;padding-top:12px}
+  .neg{color:var(--bad)}
+  .checks{list-style:none;margin:0;padding:0}
+  .checks li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--rule);font-size:13.5px}
+  .checks li:last-child{border-bottom:none}
+  .chip{font-size:11.5px;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .chip.y{background:var(--good-bg);color:var(--good)}
+  .chip.n{background:var(--bad-bg);color:var(--bad)}
+  .chip.na{background:var(--neutral-bg);color:var(--muted)}
+  .verdict{font-size:13.5px;padding:10px 12px;border-radius:8px;margin:4px 0 12px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .btn{all:unset;cursor:pointer;font-size:13.5px;padding:8px 14px;border-radius:8px;border:1px solid var(--rule);background:var(--card)}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .copied{font-size:12.5px;color:var(--good);align-self:center}
+
+  .proj{margin-top:6px}
+  .proj-wrap{overflow-x:auto}
+
+  footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--rule);color:var(--muted);font-size:12.5px}
+  footer .who{color:var(--ink);font-size:14px;margin-bottom:8px}
+  .disclaimer{max-width:820px}
+
+  .mbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--card);border-top:1px solid var(--rule);padding:10px 16px;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -4px 16px rgba(0,0,0,.05)}
+  .mbar .m{font-size:13px;color:var(--muted)}
+  .mbar .m b{color:var(--ink);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+  .mbar .m b.neg{color:var(--bad)}
+  .hidden{display:none !important}
+
+  /* Lead gate */
+  dialog.gate{border:none;border-radius:14px;padding:0;width:min(440px,calc(100vw - 32px));background:var(--card);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  dialog.gate::backdrop{background:rgba(20,19,17,.55)}
+  .gate form{padding:22px 22px 18px}
+  .gate h3{font-family:var(--serif);font-weight:normal;font-size:21px;margin:0 0 4px}
+  .gate p.sub{color:var(--muted);font-size:13.5px;margin:0 0 16px}
+  .gate .field{margin-bottom:12px}
+  .gate .consent{font-size:11.5px;color:var(--muted);margin:4px 0 16px}
+  .gate .row{display:flex;gap:8px;justify-content:flex-end}
+  .gate .err{color:var(--bad);font-size:12.5px;min-height:16px;margin:-4px 0 8px}
+  .gate .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  .gate .done{padding:26px 22px}
+  .toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#1b1a18;color:#fff;font-size:13.5px;padding:10px 16px;border-radius:8px;z-index:30;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+  .print-gate{display:none}
+
+  @media (max-width: 900px){
+    .layout{grid-template-columns:1fr}
+    .results{position:static;max-height:none;overflow:visible}
+    .mbar{display:flex}
+    body{padding-bottom:64px}
+  }
+  @media (max-width: 560px){
+    .modes{gap:10px}
+    .mode{padding:14px 14px}
+    .mode .t{font-size:17px}
+    .mode .d{display:none}
+    .mode .chk{top:12px;right:12px;width:18px;height:18px;font-size:11px}
+    .grid{grid-template-columns:1fr}
+    h1{font-size:28px}
+  }
+  @media print{
+    body{background:#fff;font-size:12px}
+    .brand{background:#fff;color:#000;border-bottom:1px solid var(--rule)}
+    .brand img{mix-blend-mode:multiply}
+    .brand .logo-sequel{filter:invert(1)}
+    .brand .logo-compass{filter:invert(1)}
+    .brand .sep{background:var(--rule)}
+    .brand .broker{color:#555}
+    .back,.modes,.actions,.help,.no-print,.mbar,.q,.pop,dialog,.toast{display:none !important}
+    body.gated:not(.unlocked) > *:not(.print-gate){display:none !important}
+    body.gated:not(.unlocked) .print-gate{display:block;padding:40px;font-size:16px}
+    .results{max-height:none;overflow:visible}
+    .layout{grid-template-columns:1fr 1fr;gap:18px}
+    .results{position:static}
+    .panel,.kpi{break-inside:avoid}
+    .ctl{border:none;border-bottom:1px solid var(--rule);border-radius:0}
+    .wrap{padding:0}
+  }
+
+  .comps-wrap{overflow-x:auto}
+  table.comps{width:100%;border-collapse:collapse;font-size:13.5px}
+  table.comps th{font-weight:normal;color:var(--muted);font-size:12px;text-align:right;padding:4px 0}
+  table.comps th:first-child,table.comps td:first-child{text-align:left}
+  table.comps td{padding:4px 0;border-bottom:1px solid var(--rule);text-align:right}
+  table.comps .ctl{margin-right:8px}
+  table.comps td:last-child .ctl{margin-right:0}
+  table.comps input{width:100%;text-align:right}
+  table.comps td:first-child input{text-align:left}
+  .comps .psf{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap;padding-right:10px}
+  .comps .open{font-size:12.5px;white-space:nowrap;color:var(--accent);text-decoration:none}
+  .comps .open[aria-disabled="true"]{color:var(--muted);opacity:.45;pointer-events:none}
+  @media (max-width:560px){ table.comps{min-width:520px} }
+  .switch{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:0 0 14px;cursor:pointer}
+  .switch input{width:16px;height:16px;accent-color:#1b1a18}
+  .ctl select{all:unset;flex:1;min-width:0;padding:9px 10px;font-size:15px;cursor:pointer}
+  .ctl textarea{all:unset;flex:1;min-width:0;padding:9px 10px;font-size:14px;line-height:1.5;white-space:pre-wrap;min-height:84px;font-family:var(--sans)}
+  @media print{ .ctl textarea{min-height:0} }
+
+  /* Partner model additions */
+  .ver{font-family:var(--sans);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:3px 9px;border-radius:99px;vertical-align:middle;margin-left:8px}
+  .qs{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:4px 18px;margin-bottom:30px}
+  .qrow{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--rule)}
+  .qrow:last-child{border-bottom:none}
+  .qrow .qt{font-size:14.5px}
+  .qrow .qd{font-size:12.5px;color:var(--muted);margin-top:2px;max-width:640px}
+  .yn{display:flex;flex:none;border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+  .yn button{all:unset;cursor:pointer;font-size:13.5px;padding:7px 16px;color:var(--muted);background:var(--card)}
+  .yn button[aria-pressed="true"]{background:var(--accent);color:#fff}
+  .yn button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .delay-ctl{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;margin-bottom:14px}
+  .delay-ctl label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px}
+  .delay-ctl .slide{flex:1;min-width:220px}
+  .delay-ctl input[type=range]{width:100%;accent-color:var(--accent);margin:8px 0}
+  .delay-ctl .dval{font-size:20px;font-variant-numeric:tabular-nums;min-width:120px;text-align:right;padding-bottom:4px}
+  .kpis.four{grid-template-columns:repeat(4,1fr)}
+  .kpi .dl{font-size:12px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+  .kpi .dl.neg{color:var(--bad)}
+  .bars{width:100%;height:120px;display:block;margin:10px 0 0}
+  .axis{position:relative;height:18px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .axis span{position:absolute;top:2px;transform:translateX(-50%)}
+  .delay-ctl input[type=range]:focus{outline:none}
+  tr.hl td{background:var(--accent-soft)}
+  #delayTable td,#delayTable th{padding-left:8px;padding-right:8px}
+  @media (max-width:700px){ .kpis.four{grid-template-columns:1fr 1fr} .qrow{flex-direction:column;align-items:flex-start} }
+</style>
+</head>
+<body>
+<header class="brand">
+  <div class="brand-in">
+    <a class="brand-l" href="https://www.sequelsc.com" aria-label="Sequel Real Estate Group">
+      <img class="logo-sequel" src="https://sequelsc.com/wp-content/uploads/2024/08/logowhite1.png" alt="Sequel Real Estate Group" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+      <span class="fallback">Sequel</span>
+    </a>
+    <div class="brand-r">
+      <span class="broker">Chris England, Broker</span>
+      <span class="sep" aria-hidden="true"></span>
+      <img class="logo-compass" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAgZ0lEQVR42u1daZhVxbVddW8PNDTzPIggMqugIipolCgYnMkTE40aY/JMNIlR3xTFOEV9JjGaycQho77Ie9FojCbOM9GIAxpUUARFBSdAQEQFutf7cVeZZXm66Yamud197/f1d/rUmar2vHftqg20sB/JQDJfz/WcjgNJnkZyL7vWheQSkrfpvFzHP5F8h2Rf+8Ykkj8lOcbfW8c3y+rrUzH/ci2twyEEhhBqEmTvTvIikoMBULcOB3ApgMMjUgGsA9AdQN+IOx07AegCYH38BoCJAL4BYMg/8cwhJP9K8jj/fghhQ+xTiQCalttzJMuStk4kJ5KsBBDUPBnAGQD2FPIAYAGAWgD9I+0AeB/ACgCVCQGUA/gQwAf2qT4AagC8YESxI4CpAEZafypJziA5yQhto5KqRAAN4/baEMIGATQC8zIAswCMMq67XcgaZ0h4Uwgd7NIDwBoA7dVUq2Ol7l0XEQhgIIC83hN/Y/Wd22P/AGwP4AIAZzpMXVKVCKDhHJ8X50QuGknydJIdjFvvN66PyJ4v8b5nHFcI4X0ALwHYVvfE51cBqCKZM2lRDmBtCGGdtQ0AsAzACiOKcZIkz1m3Pw1gA4DfmapoR/IBkmfF8egv11JtheYmhDIdf83Cb4qJ1e4kPyT5SHLvQyTXkmxv77mJZA3JztZ2N8nVJCus7TmSLyaq5w2Sj9t3cySXkpzvEonkHfpGP3v+APX7j4n0KkmAeiz7cpKTSXYx0fwzce7XdF4WQlgO4D4A40n2jSpCkqEKwFB79TyNsae1vQOgHQC3LSoAvGfn1QB6AFhkqqOv/h6O6oNkJwCfAjA7hLDU7JUTdPyu3dud5PUkD7Ixh/q8i1ZNACbuywTgrwC4E8BxIYRakuUhhCcBzAZwsFy0iOyZ6vu+9sqHdNzZ2ubr2M/aVkrkl1tbuWyD+Osq/b/A2oaLGGcZUYwXMV2ve2pI9gBwKICnADytcRDAMQCOAHCA7s3LTqg1FdN2CCCEUCPARJ17K4DVAP6DZJVJgUuFoKNCCBSw7tD1afbKOXrXBGt70Qw6lwCR610COAH0TJ4HgF2k/x+3tqk6/sWI4jARxU/j+DSefxfxnRttEkmFkTauVq/bo9jrSPJSkmervULHc6Q7TzQpUUXyLZIvSA/nTOevJtnO3v88yWfsvL/e9x1rO0Nt/a1Py6K+Vtshumdfa/uDbAz/3gKSCxPDdTbJNSQ7W1+P1/vOj66jjj+R/fBpG2++1RGDEBfs2IPkuyTXkdw++swC2nKSi+VfRwPvfAFwghHRV9Xmkb4rSG6QbobsivdI/tbu+Zqe286Aviq552TdM8TaFpF82M631T3fs7bharvS3l0m4l0ljo+qb4SM2UUke26tuEGumcR9bdR30n3LABwt0X6ZRGU+hLAKwIUS2UeHEDaIG66WyD9Z76FUBiRyYYZgHsAIfXe9XMHtEhsAFgzKyyB81+4ZqO+9JUR2BTDI7Izo/gHATdZ2rI4/JxkUBzhYhumlMmDz6v8PpXpOCiG8rfYaklONgENr4fwxJG8nOT4R+X8UxxxsMfX2JF8n+ZI4OIrRm0m+L2TE9z9BcpGdD9b7vm5tN5JcbOdTdc/OOq8i+QHJi+yemSSX2vnueuYQa7tZ8wfl1velJJ9KwtRzxP1dzXWMfbg+gcfear8pkZihpSE+CCBRhB+lgc1RkKRcg+sn4CxUe7z/RN1/jL1vL7X9q7Wd6qJa73yb5EzrywVCcJXOJ0hN7Knzal3/tj3zUCLuo9oYoPN2UmHXWF/21T3HWdun3QYRTMpJztfz/WO4W3bRi+rbAcUeP2iUu6fjJQLGTxJDKOrycxIgvSyA5A2gCxIjb5Ce/UYS/Flo51/QPQN1Pkbnn4niXeen2zOvkfwfO79agaFo6O3pkktt/yfjrzohpFWav4jjOE3PnpLA4ZdqPzMJcPVwxip6zjegni5kRgovIznLRamJvlkyCAeb6IxS43P2/kgsY+xbz5G83+75pu7pp/M9ZGztap7BX0iOMwlwA8n9jQAXJRLhoylknZ+rd3bUeRedX2HEOk79mGEGYU95LnMElzj+abr3djNecyKc59XfyqgSilrs6/8LNaCfJYjeVlb+WyT7mEU8kmQtyVsMWDkN/gXThR3lil2Z4db10vlYko+QHGY6frCHfhswjk4xpKzzy0keZedLSN5nzxynPow2wvyruL+jEXXk8vE2zt5SW28KJjmzK26OXkXCTLli5fyIuJ4k/6bO/1vUmzoepPa/JMRxrtoPzPDHP2ttv3BRS3IUyadJ7ujGV0OikHWdN8C2uZzkNGubS3KOnY9Qv8+wtrFquyIZd0TyAQmcfqD2/7V35FuCzo9SoDfJeY5AG9wFaj/VRF65uP1lkhXGNU+TnGdAiL72kf69rICTeyObErBKCCRXx31dFbc4zhjh9+L+Dtb2N0m/zhnG7kUJfL6s9gdM9JeZQTqyKGwCQ9JQDfDQxLDZXi7dB6Zz47V7NMix9r5o6Z+dYUkfbTr6U9Ed9ASM5iTyhECqbFyj1N//tOvTkzEEwWad4BZMInxK986PBqBdO13X7vWoaDFY+FGsf0ByakLNuykat4TkAIv6Rd03L4n6RT25jX3nXpKXF7NrZIQ4Qjq7i81yvk7yQSce2SlrlLsYbZxBgskys2EiYX1LcFlIcieDY75YiGCqAjUboh433zvOjz+uQE9EduTuX5io7ShReZ9Zw5X16fBiQX4dcPmRxjjUJOZ3EtVYLrjM0dzAxISJYmj6eQthlxUT9UcRtQ/JlRrE1IQIjtEgbkwoe4baD7f3HS1XrFdLi4IZZ/pEkMcYdkk8pAiHG9R+RAK3aCc8E6WiEcZoeVyVzQanmNaklOk7Y7aNdWqcXJpaC/FWJUGQS5LB3yZxuI2FQCuzDLKWHBATQb8ur6HMGCcaxd9K4HWCRVD7JHCeqHfRkkzyzUHdOVHcbfr406av2pkhtDiJ88dBXaz2k0wndlVc/f9aTQj044gvN7g8QXJ0RqTykgROx6r9UTMGK82oXB/hKBWST43TLcX9ZWbwXKROLLc57XYWpp2fEEG89lsPx6ptB5LbtyaubwA8xwsOf0jgE6OgDylFzhexRCn6tkUvc83d8ZwZOUfJ+CPJExKboA/JJ3XtIxdRCI4SZGLRRba2rAQNFuZdpQSScoPZEebqVXveIMnLzJje3onGpEZ1k7vF5qacl0y8VFr4NQZ9Lkys4C6iZCeCMvnOD5A81uPfbYgI8hLlA+za4YLTbZpxjDBsb1Pn1ylN3iXGAJJ/1vVzm9RLsA73VRyeJK8h2T3pRFfr5B8slp4Tsm/XtcNQ+mUxWJwQulnMEF3lfiQfSwJkLoEP0dwKBf/hTZpt7G6NJm3u0McWk5yc+uUkz9b1J8xtibOB0dU50t4b2jDiyyz2sYLkLclk0BglmdSQnJ6o13KS3xc818Y8iSQc36RqoMz+/6bCmCT539bhChNlH8hQ2T3p1C9sOjhf4v6PRRArrX2qgmqLLXup0u59VPC/i+RQNxSj2miqjvUiOci9AOvEXerEYzYbV2HXn/U5/bZi7G1uUE2uXTQEeyY21RdFGGkSS6VJldOV1LLrJsPdxP69iuWfbMivTKRBTZqLp2vVypShgh25tmLsbaI6CIrzU5IyZ4zY0dzn2bZvgXP9JPO63iF58CZPI9vc95kK71Iv39/uiaJ/uM3u3WJRq7zFCy4thqVQLcRLGJe07a4kWSpvIp/Av5+toyTJH7rk2FQJUGb+Z3+b1IiuyOBUj5P8hkLAq0rW/seN6M2QwP9mE0F7ZthjJ0tCUzud7Jgy6GbrJPt/tFw8CtFnmhsY1cNQzeSR5FWa9i1riwbfpialGGdHrr4shojtngnmHv4jTr5lqOgxMfTcKElA8pSYeZJBCPtYgudLWdwu2+C9uLyqrRGASc8qTx9r5LMHpbDVqqorBftViW3m9sBI2RFxJnHjqsB0y0QT91eT3CFLrCiStdCiV6OS93Vtw4GdGOe4UfA5bXM9IaWKvWtSoUeGGh4hnNGkw4kyvkNDo349SP4ryacSvb9rBrFUKlslduz7inPnSsj/CPlxrmRaY6ShBdDGm9//F59NTBD/K8PXg4ou5s2myDfoo8lgDrIwbgxVTsx4rrtlsq6wVKdcG0d+DJ/fQLJbY3L7E9//+Zg5nNwzkuTvEvzsmxiTm+QG5hPRMi5xNe4huV/Gc8PlqlSWOP8j5N/oK5ya6HsjSV5r+PhtkmCb7q42xSbjcnVF/dopYePTiQXrUmFbBXVWWcLCIW3c1dso8psqBiJP7Dq9e718/u2yvA3FB05R0k6UzO0+kW9h1LmPUdQ8kt/2NfJJRzopR/1F3f+scgM6N8jgKCF/U6KEp1kCzowY7Mmw4yZpbUKN2SDXKjJY8QncmPHXWZMQvzEOp2yA6b7wMQHAobYSaLe24vY1F+ebW7i33OuqjHv6k/x3La6hzSV80QmlTncwY7lUF2Wn3GiUtFLLonaro6PDiypduZWI/Y30YbJ9Py4oOSPOEG5SVDDDgOit9Oa77UPPaH1+v5LObx7kxxXF2rN4BslXEsbcI0ty2HlPkp8jOeKj6yZepktc9N9IJwZKDD1mxHCLFn/kW7vbtzU5Py4hs4mhPyv3okM9zwwj+XWl8H+YLMQp9wG9aAj9uzJ7dq9vWbVE/plKWrg8S3qUkN+0BKDjBF86l9xToesXWT5G/P1NeN3tY56ABraXdMfdFrmi1qldJwu/X0PVRgn5zdq37or6XSMPgTZPc6Wu9a1TPaQWuwzAfRTQeVgzf7ScgPM2Jh1KyN9ifYn9GKrp9/sMP2sVKj5JgaKQ4U42bEIog8Imk/yelinRAgs3iBhaZbJHsXG+zfxdbgx5kZaVVzfg+XIFk0Z74yQtWqxuYCd6K6jwY23c9NnW6PsXo9g3O6B33PhqI/cPIPkZ7cJ6uza7IsknASAoe/QdFDYtXIvCXviPA3gMwNMAXtQGjm3O1UNh7+EcCptBT0Oh4kgVCptDTkdhM8mgDTCLoc/dUahmshsKJW/GA0iNxXnC6/0ArooEcDwKu2zvoBd09vfqoccBPIrCpswvaNfLEvK3AvIlBYJwNUHI3gOFHc3j7z0AzwpvTwB4BsBCx1tmuF6TBdtp9uh0WZZPmeiLvwXa/35Ka9L/xWztZ9gBcf7/NS3YuUAW/3BfM5gR8S2ra+D1lWOr0r42B8ldnKm489daixvYEpC/KXZAHe+oJtkhkOymtnesXk6b+7VEnb+R8bRDoepJXxQ2vx6MQgm8wbILBgH4TRmAawAcCGApyTcBvArgFTsuQaFy1nIAq1pqfbzWiHzFYcYKmYNRqGA2BMC2KFRJyVIDRGEX9BcBvFUmi7CLqGUQCpUx6vqtJPkGgNdEIM8C+HHc1r0lSpAWau1HWFcCuBtAR/VxpZj1JQAPCkevAViq9mW6591YaymNFJUD6KAXdkWhymZPAL3xz6JJfQD0UttbAHbTPvctjgBautiXLTBaFv8KIba2gePOeXiwbFOWarfkwE9LMfi29K9Nrs1vTQafJui6qO/xrwMK1VE76K9a59V2rRpAbSB5DwplU9ahUD83Huv7ex+FEm4vhBDubUniv7Ugn2QsMXMzCmXqNuW3PpDcHMTdGkI4JHamhPzmNwRJ7iQDfj0KdY036K8m+au1Y/yrCVrlGxI3oSEqIwdgTQjhjRLnl34lg2/rja2T8jeqNiUaGxrxobz8zmhodASwIYSwoMT5W9UGuAPAFBRmcjdobGvlGr6HQjm8eFyT/L0TtPy4FwozgF3019X+7wKgk1mQnl48J4SwS7Eaga1Z7JsNMBWFWcBuitt001/EYWcxa1WmBCC5WjekvxhcWK6Az5v6e0N/yxRheqaE/KInlnYad7Vw3UkEkgvaf65SyF2hv9Uy8D4s+flFP9aKEMK6Zg8EKZGkN4DXQwgflJDfvGNU2fntUUj2eBuF+P9CFEreL0RhIu91ACvqY+RQn/7WGrTeKEwnDkWhJu8o/d9fEaXJIYS7iyEW0FY43/R/LwAnCScjUJgRTNX5GhQmhRaJMBYCeBmFSaLFQUjuh8Ic8RAAw/SyoXqhTynWitKeAfAUgLkoFFR+GwWosoT8rUoY5caww0QYo/T/oMSAB4DTgvb9uyt9lyjlWRSmi+cCmA/glRDC6pLOLy5J0MB7O4rRB4u5RwP4ddA2sD9EIfFzLoDnASwOIbzTgJeWoTBF/NrW4v62iHxLCn1IrvkDAB5GIWH3pRDC+i314Y5aBHK6FiYu19Lx/oaMUoSvGQhACzy+pWTQlclinbu0quszXo8gDSSRDMGifEw5RFONYwHsDWAfAONMjywAcA8KGSl3ym1kifO3jiuoYNAEAPsB2EuSOf5eBjAbwCPyGuYDWP4xuGi7t9FaIv5Lq/cTf4vUfmRdK1NLnN/sSK9PQmyvglRXa4cx/22I5evjA+NV6s1/r2j7sWN8E6I6PjiquRaKtmXkWzp4pZD6qDbpGNGAZ7fRXgKXaD3hoX5xW3H4TNWqG1FfephSyPbUy14W8Hc3dVJC/pbV/+21ScffjWFf0Cade6eLQhoEj4ylxOn2Iu20iPRyK1i4TquDD9WU5BYrAVNCfp1wGajl4A8lhuC1JP9FwaKUeUN9gQQ/70TyQG0Q6RsP3Eby87GmXUnsNyvCK9PNHhIx/1XbrZ3y0u7SXgIj62J41y89tTvYTJKr7UUPaP/gPnV8fE/bzz5XQn6TIz7u5fg5jf0mrcvM13H/AJJfsbI+8TdXm0z9E2a2T+DVyfYwj2tzwu3q+EiVJMHDuv/6prQDSsj/hO4vE2K/TXKJVW+bEes61UMMXxIxLCbZ6WNSwKjrGm0WNcO3iE9FhlYPn6+qYJGqjtFGk01Sv7aE/I1HYWXV359sFH1QUtsh3fKvuj73oirZILosocD9k00J/5q1YXQJ+VtGBZA8uo7tYceQvMJK+S3WbmBDE5jmG/oxLwrRSwbEs1Yq5spUQpiouZLkgZuqCkrIrxMeAwX7D4Xc7hn39lJcYEGyh+M0q0qe25ieidJgHMmfG/DfJHlWlgWqItGX6L4PZBfkGpulat8uIf/jOInl9rbTPs5xA+hzYtWQDGlxsBXopmyGKXUWsTJDsL2Vh6V2Bzk+azdK7R52vtWy/1FWhxo50G5WYrak87NhtUPCIOemG0Lb/zuS/IkYeMd6pYCJmz/Jl5ySIkj/d5YlusaKRQ/LkApdMn3O+t2caUmZlTbL+SbWZ5P8QsY9e9j+ze+JEHrXocrbN+aj5Yk4iYjvoCnIt60uzYSM93xRBsn3syzR+vSdjqeVInwfif0+JsrvjIW5Eq9sitUUWqONPPtmSYTGimSvJHKi7U79fNwbMEHcKO1RT5L/S3Jwg3anzCbChhkubYcgjrR5//OjSk48tekkn9M9q3Vfv0YzkOnjapLH2XTiMtWpK3dJoQ2Kz7JadtM3l/rrDFm2HdE/jORRGTZXrNv0stcU9NqBigAuNtUwrFFEYPr4apv0uSC6HomRMclcxJlWszZKhVMVL6j4RK2ajfu9oQ1yeoTTiYLpNWnkTpk+i01NDjO14er6LIWMKxoFSyOAyaK4wd5BHXsq+BArVU9P3tHeXJbfSI2UKoc3TgocY7t+75lI3WoVjMoq41uxJTrl9WiPtgSS30fL04hjJ9NFX2mLonwz4DwukbA7WWDnPzLsrolW4PO5GISzcHHYLEp0UaxEkT+bPXBkhtT4kq6/kUG1F5M8ZpMt09aL9DKJ7z5K17o5lnczbp9plUP7O1MmNlis8jq6MSq3Xk9A4vwsRflI8n/itLB1ooPZDPeaVIiDi8bLqZbVWlIHnySEaVaPsU/CXKca8x2S4aaPNS/srMa44BvzBjoolLjSdb0hfycrTnhpYsV3ENWS5PElty5T1++eRPL2UiDsFYveRVjvYxlZPzC1286e/4IWgmy+6jXqGhbnnL0wpET+ugTB5RYNnK1rR/izEmnTm0RXtVxuz0vUL1WiZgdz53aUGl0bawabkdfXwvWPxOIPzaJWrYMdrI79y5YU2s7shVhafmpCxVGfHdrWjUMxw+6aT3nQt3pRsu68xJj2uf4LLWx+grmCTc9QcT5Zx52VLRTzA6O+rzLLdIWo91MJYfxSz30uCXC0ayPh3aC8vvNI7pzEU6jYfqURQQ+ryvpdR7L+/6xFCM/eYpLADMJqiSwqDTkk3H24qHk5yXEJ8i/Tc980dVAlN+dKa8u3YiLIa4ndEvn3nUxlHmaleisMye01r0+t1ahIYD6c5K0G79wWo2CLS3/VqDEOIEavXrVJi4j8C3TtgqQ9Tv3u2trUQTKfkksCakPEKLcn8PiiJXKU22RYXiXio5fVy+2trUbN9v93rHbtdsmgztC1q5P2GWo/2t7zGZJXWZnzspbsNRjT7CdjeYJdOzzmUSQq9FuW+ZuPf7r2Q6vuPsKN6GZjIDM0chLhP1OnnojFJQ3Jp+jan5Jo4cFq/7kNokqi8RmJwHxLRbhJgHLBqb0idos1zvJEMn41gds5lmuR81IvCvtG429snVk+zeQNnG3rBrong/iyrs1KrNthmqV6QoiPwIhehYvKc0hOMsLLFbuqMLF9G8nfWfuIRBJGZojz/ZMS3X6ZRfaiGoiwOl1JOz2alfszghgDJJY6Jp0/yuLTPUycd9Ds4RrluMX37J9EsIJq4JLkiVnW7Vah/E9+v8zGUKHkzZBw6tiMNo/kdZNkWGHqMxJHnFC7thjG3CCbwKzZJTagSBjX69pnzeqv1r3PJaHNp0jOs4EPl4U8JIvimyNzKGua2vr7NeVDdLMo6qsk/+5hW1VfXS7GiFJxnJZxPS145E3Nxvy/X5lKyTVJpK+JuCBvYu8QzRmsJrlLohKioXhJQhQxNrCHvTcugTrY2n6hth4676+SqeV1EESusdySpFqFuoIquraNgjExDjJI/TvX7puutun23JjELqpMVOZNxhw5GcRxidf5mx3j38KG4Sx1dP8E+dHifUjEUmFWP638fF6BkCUknzCgdVVO/KX2zWhARfXTTSI41wgE5xtB6B1E4L3M/6aW1AeLcq7SvbFtjmIn7Yzjz9OzX06I4Odqvzhp7yLvaFhRcH49NkE/i11Hg2WkgLIs6kgRS2cheomCIxE4/+VGUeJKDrGg1GKSt9o950m0VpivPbkxUiDJfu6ipdfbWmiWJI+z+x9LCDVy9yl2zz4uGcTZ5ST/oWjpEPMYyi3yd3xRcnsjLeGOWjtIkgclVB0DG4fZMz1kID5gQK1UJvI99v6d9eyRCTIetvOLpVcrzDZ5hGRnne8qN6uvzkfJv96lHoQvInmDnX89Eqa1PawZuwpjjDskwbYxW2k3k4rBJsoGaiJog8Es3yLS5BKbIGchzAsS5B+q9j8mVm/U8+MNeMeqbYq1/UiRtK467yyAnWN9uYXk0xlSpKPF0RnXzZtIn2ZAX0byx/aOqxV7LzeJV2tx+qA9FUjyWGvbIfr1yXgvVvuZCXwmy8//z2ab6dtCEx8n2LLxMlv9s1SA7G/EMkLAvDV5x3yJ+7yJ0LdJ3mnf20+A3NfaFsdv6/xSqYj4ngNFRHE6tackxtftmUcTqXKEvrOLtc3SePJGOC9ppXXO2n+nZyfaONrJ+6khuWsSYxna6iZCdLxGgDgp4YaYOLKj6fkYHzjNuCnq1GNNInxfQHSJUJNY5DNJvmrnkVPHxFCswrXfSzh+tXF8fz0zw/pzgtr2tv6cHKe8jZgHykN6MplD2UuE/6yIMBSNm9dEksCnL4+zVUXBkB+nQ2cmXHC/RGEPA+5vJO49i2Yuybl2PjZj2vk+ks/YeQxH72rIfIvkdXbPNzKikwtJzrbznpIkHqzpJMP3yWQ834ueQyLyf5rYSflWlTll4nxvhY13SdTCHAFxmN0bLepfG2DbiyPvSxBQGydV1Ha0I1dtz5KcZeeH+g5naptH8kE7n6R3p/GIGl+irWVba4X4SKg/cLVkUb9lyqruaDZT1xgHaTNJMsYVx9YRI/+92nc2oB7iGTJJ2+HWFjmtlxHPmyT/nPHc3tb2IMkX7Xyg7nHj8l9cvCcE9wX73iBJqvsStziufbyqqEO7W1gS5Cy48pYAsm2yIcJ6C6NGYrnR9ydOxOcAa7tDsfV8ot9/m6ECPN5wA8l3ffmbJI7HG6IdcJUhu5v0+4NJf2Poe5xJgSoZiH8w169tEULiMh4cLW8D/EWuwxMg/y2JwS9QXmKwe5eQfNS+1TtmLWdIAF8Gf7naXLzPlpXvUcQXSL6WxOX/pGd9kmuPuIQrMYS7FwMOtqqREUJgCKEmhHBrCOFyVR1Zr5yCb6NQrOoWtRPAgSjUN7pOz9dq3+LtAdxvm1X3QGFv/Hn2uS46rrC2yHGeVfOmjo6guShsvtzb2u5EoWrKcNt0+VodP6+KHuUhhL+jsI37NJJDVOotH0JYXgy6PlckkiBmvNQKKGUAbgHwsxDCWkPUMSjsAP5Xe3wiCruGP2BtMSrnBNA9gwCYQQBv6ejI/oeOvifvvXp+PzPc7kahPt/xUgFxPKcAOADAqyryUFMspfaKggAkBWokERhCeCWEcFgI4bvilnUqkHQAgKdCCC9ZLtxkFIonzLZXxh0xn7e26DKuzOiCL6Z8W8d+1vacjmOtLX5vaiSiEMIqSYahAHZVDaVcCGFWCOHOEMK6iPRiKbVXlH5mMq8fuWgdgF8DuELnteKyKSjUMFxgz+yk40v22sjRqzI+6RJguY79rW2Rjh+5riGE1wC8AOBATU+v1/cvFFHMNW7PFauBV5SzTOKOlFNeARCnTnMC7GAh9m5JiXKpiJ11XJpIgNqEAPIZEmCl7utnon0pCuVYJyZ6+1YUilR0DSEsE8LnZIynaAtWtJhpRgE+B6DWAPqKxG2cJdsgqTBYxtxyK2c3WM+vcdzUQQA5UyP5EML7JB8H0AdAhxDCGn3vTC/aKKM0V/h365bQa3UEIElQk9oOABYnhFIru6CTEBK5/HUUqqC5DRCLLTuRrZZBGTk5EtsRIp4PrD/r4nOm21tUeZr/B0Hl2HKBF+63AAAAAElFTkSuQmCC" alt="Compass" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+      <span class="fallback">Compass</span>
+    </div>
+  </div>
+</header>
+<div class="wrap">
+  <div class="top"><a class="back" href="working-tools.html">← Working Tools</a></div>
+  <h1>Spec Build Analysis <span class="ver">Partner model</span></h1>
+  <p class="lede">Price a speculative custom build and see where the money lands: total project cost, profit at sale, and how proceeds split between the investor, the builder and the developer. Answer the deal questions first and the matching fields appear. Every figure updates as you type.</p>
+
+  <div class="stop"><span class="num">01</span><h2>What is being built</h2></div>
+  <div class="modes" role="group" aria-label="Project type">
+    <button class="mode" data-group="type" data-mode="single" aria-pressed="true">
+      <span class="chk" aria-hidden="true">✓</span>
+      <div class="tag">One lot</div>
+      <div class="t">Single spec home</div>
+      <div class="d">One lot, one house. All costs belong to this project.</div>
+    </button>
+    <button class="mode" data-group="type" data-mode="multi" aria-pressed="false">
+      <span class="chk" aria-hidden="true">✓</span>
+      <div class="tag">Multiple lots</div>
+      <div class="t">Subdivision project</div>
+      <div class="d">A parcel split into lots with shared costs — roads, utilities, a dock — spread across them.</div>
+    </button>
+  </div>
+
+  <div class="stop"><span class="num">02</span><h2>How it is funded</h2></div>
+  <div class="modes" role="group" aria-label="Funding structure">
+    <button class="mode" data-group="fund" data-mode="equity" aria-pressed="true">
+      <span class="chk" aria-hidden="true">✓</span>
+      <div class="tag">All equity</div>
+      <div class="t">Investor funds it</div>
+      <div class="d">No construction loan. Land and construction are paid from equity.</div>
+    </button>
+    <button class="mode" data-group="fund" data-mode="loan" aria-pressed="false">
+      <span class="chk" aria-hidden="true">✓</span>
+      <div class="tag">Loan + equity</div>
+      <div class="t">Construction loan</div>
+      <div class="d">A loan covers part of cost. Interest is carried on the average drawn balance.</div>
+    </button>
+  </div>
+
+  <div class="stop"><span class="num">03</span><h2>Who is in the deal and how it works</h2></div>
+  <div class="qs" id="qs"></div>
+
+  <div class="layout">
+    <div class="inputs" id="inputs"></div>
+
+    <aside class="results" aria-live="polite">
+      <div class="actions">
+        <button class="btn primary" id="btnPrint">Print / Save PDF</button>
+        <button class="btn" id="btnLink">Copy link to this analysis</button>
+        <button class="btn" id="btnReset">Reset</button>
+        <span class="copied hidden" id="copied">Link copied</span>
+      </div>
+
+      <div class="panel">
+        <h3 id="resTitle">Deal summary</h3>
+        <div class="kpis">
+          <div class="kpi"><div class="l">Profit</div><div class="v" id="kProfit">–</div></div>
+          <div class="kpi"><div class="l">Margin on sale</div><div class="v" id="kMargin">–</div></div>
+          <div class="kpi"><div class="l">Total cost</div><div class="v" id="kCost">–</div></div>
+          <div class="kpi"><div class="l">Cost / heated sf</div><div class="v" id="kPsf">–</div></div>
+        </div>
+        <table id="budget"></table>
+      </div>
+
+      <div class="panel hidden" id="rollupPanel">
+        <h3>Whole project</h3>
+        <table id="rollup"></table>
+        <p class="help" style="margin:10px 0 8px">Assumes every lot performs like the one analyzed above. Shared costs are counted once.</p>
+      </div>
+
+      <div class="panel">
+        <h3>Investor returns</h3>
+        <div class="kpis">
+          <div class="kpi"><div class="l">Investor IRR</div><div class="v" id="kIrr">–</div></div>
+          <div class="kpi"><div class="l">Equity multiple</div><div class="v" id="kMult">–</div></div>
+        </div>
+        <table id="returns"></table>
+      </div>
+
+      <div class="panel">
+        <h3>Sources & uses</h3>
+        <table id="sources"></table>
+      </div>
+
+      <div class="panel hidden" id="compsPanel">
+        <h3>What the comps say</h3>
+        <table id="compsOut"></table>
+        <p class="help hidden" id="compsWarn" style="margin:10px 0 8px"></p>
+      </div>
+
+      <div class="panel">
+        <h3>Split at closing</h3>
+        <table id="waterfall"></table>
+      </div>
+
+      <div class="panel">
+        <h3>Deal check</h3>
+        <div class="verdict" id="verdict"></div>
+        <ul class="checks" id="checks"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <section class="panel proj" id="delayPanel">
+    <h3>If closings are delayed</h3>
+    <div class="delay-ctl">
+      <div><label for="delayWhat">What slips</label><div class="ctl"><select id="delayWhat"><option value="sell">Home sale closings</option><option value="build">Construction</option><option value="hz">Approvals and lot closing</option></select></div></div>
+      <div class="slide"><label for="delayMonths">Months of delay</label><input type="range" id="delayMonths" min="0" max="24" step="1" value="0"></div>
+      <div class="dval" id="delayVal">On time</div>
+    </div>
+    <div class="kpis four" id="delayKpis"></div>
+    <svg class="bars" id="delayBars" viewBox="0 0 520 110" preserveAspectRatio="none" role="img" aria-label="Earnings by months of delay"></svg>
+    <div class="axis" id="delayAxis" aria-hidden="true"></div>
+    <p class="help" id="delayCap" style="margin:0 0 12px"></p>
+    <div class="proj-wrap"><table id="delayTable"></table></div>
+    <div class="note" id="delayNote" style="margin:12px 0 10px"></div>
+  </section>
+
+  <section class="panel proj">
+    <h3>Cost overrun against sale price</h3>
+    <div class="proj-wrap"><table id="grid"></table></div>
+    <p class="help" style="margin:10px 0 8px">Profit on this home where construction runs over budget and the sale price moves. Overhead, builder fee and contingency scale with construction cost, so a 10% overrun costs more than 10% of the hard number. Red is a deal where the investor does not get all of their capital back.</p>
+  </section>
+
+  <section class="panel proj">
+    <h3>If the market moves</h3>
+    <div class="proj-wrap"><table id="sens"></table></div>
+    <p class="help" style="margin:10px 0 8px">Sale price held against the same budget. Carry costs and the preferred return keep accruing while the home sits, so the last column shows the same sale price with three more months of marketing.</p>
+  </section>
+
+  <footer>
+    <div class="who">Chris England, Broker · Compass · 843-345-2864 · <a href="mailto:chris@sequelsc.com">chris@sequelsc.com</a></div>
+    <p class="disclaimer">Internal working estimate. Figures are only as good as the inputs; construction costs, permitting timelines, financing terms and resale values all move. Not an appraisal, a bid, or a promise of any preferred return — distributions follow the signed agreement.</p>
+  </footer>
+</div>
+<script>
+(function(){
+  // type: usd | pct | num | text | select ; show: both | loan | multi | single | multi-loan combos handled by fn
+  var ALLOC = [['equal','Equal share per lot'],['price','Weighted by sale price'],['size','Weighted by lot size'],['custom','Custom share for this lot']];
+
+  var SECTIONS = [
+    { n:'03', title:'Project', fields:[
+      {id:'preparedFor', label:'Prepared for', type:'text', def:'', wide:true},
+      {id:'address', label:'Lot / parcel address', type:'text', def:'', wide:true},
+      {id:'area', label:'Community', type:'text', def:''},
+      {id:'lotCount', label:'Lots in the project', type:'num', def:4, show:'multi'},
+      {id:'sfHeated', label:'Heated square feet', type:'num', def:3000},
+      {id:'sfUnheated', label:'Garage, porches & decks (sf)', type:'num', def:900},
+      {id:'horizMonths', label:'Entitlement & site development time', type:'num', def:12, suffix:'months', show:'multi'},
+      {id:'buildMonths', label:'Build time', type:'num', def:11, suffix:'months'},
+      {id:'sellMonths', label:'Marketing time after completion', type:'num', def:3, suffix:'months'},
+      {id:'sellGapMonths', label:'Months between home closings', type:'num', def:2, suffix:'months', show:'q-stag'}
+    ]},
+    { n:'04', title:'Land acquisition', fields:[
+      {id:'landPrice', label:'Lot purchase price', type:'usd', def:350000, show:'single'},
+      {id:'parcelPrice', label:'Parent parcel purchase price', type:'usd', def:900000, show:'multi'},
+      {id:'depositPct', label:'Deposit paid up front', type:'pct', def:10, show:'q-dep'},
+      {id:'landCloseMonth', label:'Balance paid at closing, months after the deposit', type:'num', def:12, suffix:'months', show:'q-dep'},
+      {id:'landClosePct', label:'Purchase closing costs', type:'pct', def:1.5},
+      {id:'clubInit', label:'Club / community initiation or transfer fee', type:'usd', def:0},
+      {id:'clubMonthly', label:'Club / community dues while owned (monthly)', type:'usd', def:0}
+    ]},
+    { n:'05', title:'Shared project costs', show:'multi', fields:[
+      {id:'shEntitle', label:'Subdivision, legal & entitlement', type:'usd', def:60000, show:'multi'},
+      {id:'shSurvey', label:'Survey, platting & recording', type:'usd', def:35000, show:'multi'},
+      {id:'shEng', label:'Engineering & agency permitting', type:'usd', def:80000, show:'multi'},
+      {id:'shRoad', label:'Road, access & common clearing', type:'usd', def:150000, show:'multi'},
+      {id:'shUtil', label:'Utility extensions (water, sewer, power)', type:'usd', def:120000, show:'multi'},
+      {id:'shAmenity', label:'Dock, walkway or beach access', type:'usd', def:500000, show:'multi'},
+      {id:'shCommon', label:'Common landscaping, signage & entry', type:'usd', def:40000, show:'multi'},
+      {id:'shOther', label:'Other shared costs', type:'usd', def:0, show:'multi'},
+      {id:'shContPct', label:'Contingency on shared costs', type:'pct', def:10, show:'multi'},
+      {id:'allocMethod', label:'How shared costs are spread', type:'select', options:ALLOC, def:'equal', wide:true, show:'multi'},
+      {id:'allSalePrice', label:'Combined sale price of all lots', type:'usd', def:9800000, show:'alloc-price'},
+      {id:'lotSf', label:'This lot (sf or acres)', type:'num', def:20000, show:'alloc-size'},
+      {id:'allLotSf', label:'All lots combined (same units)', type:'num', def:80000, show:'alloc-size'},
+      {id:'customSharePct', label:'This lot’s share of shared costs', type:'pct', def:25, show:'alloc-custom'}
+    ]},
+    { n:'06', title:'This lot’s development', fields:[
+      {id:'ldSite', label:'Site prep, clearing & fill', type:'usd', def:45000},
+      {id:'ldUtil', label:'Utility taps & connections', type:'usd', def:25000},
+      {id:'ldSeptic', label:'Well, septic or lift station', type:'usd', def:0},
+      {id:'ldDrive', label:'Driveway, culvert & access', type:'usd', def:20000},
+      {id:'ldPermit', label:'Building permits & impact fees', type:'usd', def:30000},
+      {id:'ldSurvey', label:'Lot survey, staking & elevation cert', type:'usd', def:6000},
+      {id:'ldOther', label:'Other lot costs', type:'usd', def:0}
+    ]},
+    { n:'07', title:'Construction cost', itemize:true, fields:[
+      {id:'costHeated', label:'Heated space', type:'usd', def:375, suffix:'/ sf', grp:'simple'},
+      {id:'costUnheated', label:'Garage, porches & decks', type:'usd', def:150, suffix:'/ sf', grp:'simple'},
+      {id:'iSite', label:'On-lot sitework at start of build', type:'usd', def:25000, grp:'items'},
+      {id:'iFound', label:'Foundation & slab', type:'usd', def:95000, grp:'items'},
+      {id:'iFrame', label:'Framing & lumber', type:'usd', def:230000, grp:'items'},
+      {id:'iExt', label:'Roofing & exterior finish', type:'usd', def:165000, grp:'items'},
+      {id:'iWin', label:'Windows & exterior doors', type:'usd', def:95000, grp:'items'},
+      {id:'iPlumb', label:'Plumbing', type:'usd', def:70000, grp:'items'},
+      {id:'iHvac', label:'HVAC', type:'usd', def:55000, grp:'items'},
+      {id:'iElec', label:'Electrical & low voltage', type:'usd', def:65000, grp:'items'},
+      {id:'iDry', label:'Insulation & drywall', type:'usd', def:70000, grp:'items'},
+      {id:'iTrim', label:'Interior trim & doors', type:'usd', def:85000, grp:'items'},
+      {id:'iCab', label:'Cabinets & countertops', type:'usd', def:95000, grp:'items'},
+      {id:'iFloor', label:'Flooring & tile', type:'usd', def:80000, grp:'items'},
+      {id:'iPaint', label:'Paint & finishes', type:'usd', def:45000, grp:'items'},
+      {id:'iAppl', label:'Appliances & fixtures', type:'usd', def:55000, grp:'items'},
+      {id:'iPool', label:'Pool & outdoor living', type:'usd', def:0, grp:'items'},
+      {id:'iLand', label:'Landscaping & irrigation', type:'usd', def:45000, grp:'items'},
+      {id:'iHard', label:'Patios & hardscape', type:'usd', def:35000, grp:'items'},
+      {id:'changeOrders', label:'Change orders & allowance overages', type:'usd', def:0},
+      {id:'changeBilled', label:'Collected from buyer for change orders', type:'usd', def:0}
+    ]},
+    { n:'08', title:'Soft costs & builder', fields:[
+      {id:'softDesign', label:'Plans, architecture & engineering', type:'usd', def:35000},
+      {id:'softOther', label:'Other soft costs', type:'usd', def:10000},
+      {id:'warranty', label:'Warranty & punch list reserve', type:'usd', def:10000},
+      {id:'gcPct', label:'General conditions / overhead', type:'pct', def:6},
+      {id:'builderFeePct', label:'Builder fee', type:'pct', def:8},
+      {id:'contPct', label:'Contingency', type:'pct', def:5}
+    ]},
+    { n:'09', title:'Carry while owned', fields:[
+      {id:'taxAnnual', label:'Property tax (annual)', type:'usd', def:6000, link:{href:'https://www.beaufortcountyauditor.com/calc', label:'Tax calculator ↗'}},
+      {id:'insAnnual', label:'Builder’s risk & liability (annual)', type:'usd', def:9000},
+      {id:'utilMonthly', label:'Utilities (monthly)', type:'usd', def:300},
+      {id:'hoaMonthly', label:'HOA / POA dues (monthly)', type:'usd', def:100}
+    ]},
+    { n:'10', title:'Construction loan', show:'loan', fields:[
+      {id:'ltcPct', label:'Loan to cost', type:'pct', def:75, show:'loan'},
+      {id:'rate', label:'Interest rate', type:'pct', def:8.5, step:0.125, show:'loan'},
+      {id:'loanTermMonths', label:'Loan term', type:'num', def:18, suffix:'months', show:'loan'},
+      {id:'interestMode', label:'Interest is', type:'select', options:[['reserve','Financed by the loan (interest reserve)'],['equity','Paid in cash as it accrues']], def:'reserve', wide:true, show:'loan'},
+      {id:'pointsPct', label:'Points / origination', type:'pct', def:1, show:'loan'},
+      {id:'lenderFees', label:'Other lender & title fees', type:'usd', def:3500, show:'loan'}
+    ]},
+    { n:'11', title:'Sale', fields:[
+      {id:'salePrice', label:'Expected sale price (this home)', type:'usd', def:2450000},
+      {id:'commPct', label:'Real estate commission', type:'pct', def:5, show:'q-nolist'},
+      {id:'commListPct', label:'Listing commission kept by the developer', type:'pct', def:3, show:'q-list'},
+      {id:'commBuyerPct', label:'Buyer’s agent commission', type:'pct', def:3, show:'q-list'},
+      {id:'sellerClosePct', label:'Seller closing costs', type:'pct', def:1.5},
+      {id:'marketing', label:'Marketing, staging & photography', type:'usd', def:15000},
+      {id:'concessions', label:'Buyer concessions allowance', type:'usd', def:0}
+    ]},
+    { n:'13', title:'Investor terms', fields:[
+      {id:'builderCoPct', label:'Builder share of the equity', type:'pct', def:10, show:'q-co'},
+      {id:'prefRate', label:'Investor preferred return', type:'pct', def:10},
+      {id:'splitBuilderPct', label:'Builder share of remaining profit', type:'pct', def:50},
+      {id:'hurdleIrr', label:'Investor return hurdle (annual)', type:'pct', def:15, show:'q-tier'},
+      {id:'splitAbovePct', label:'Developer share above the hurdle', type:'pct', def:50, show:'q-tier'},
+      {id:'deferFeePct', label:'Share of the builder fee deferred', type:'pct', def:50, show:'q-defer'},
+      {id:'deferCommPct', label:'Share of the listing commission deferred', type:'pct', def:50, show:'q-deferlist'},
+      {id:'prefBasis', label:'Preferred return accrues on', type:'select', options:[['drawn','Capital as it is actually drawn'],['committed','The full commitment from day one']], def:'drawn', wide:true},
+      {id:'prefCompound', label:'Preferred return style', type:'select', options:[['simple','Simple, not compounded'],['annual','Compounded annually']], def:'simple', wide:true},
+      {id:'investorTaxPct', label:'Investor effective tax rate (optional)', type:'pct', def:0}
+    ]},
+    { n:'14', title:'Targets', fields:[
+      {id:'tProfit', label:'Minimum profit per home', type:'usd', def:150000},
+      {id:'tMargin', label:'Minimum margin on sale price', type:'pct', def:12},
+      {id:'tROC', label:'Minimum return on cost', type:'pct', def:15},
+      {id:'tInv', label:'Minimum investor IRR', type:'pct', def:15}
+    ]},
+    { n:'15', title:'Assumptions & deal terms', fields:[
+      {id:'dealNotes', label:'Notes that print with this analysis', type:'area', def:'', wide:true}
+    ]}
+  ];
+
+  var TIPS = {
+    preparedFor:'Optional. The investor, partner or client this analysis is for. It prints at the top of the PDF.',
+    address:'Optional. The lot address, parcel number or subdivision name. For reference only.',
+    area:'Optional. Neighborhood or community. For reference only.',
+    lotCount:'How many lots the parcel will be divided into. Shared costs are spread across this many lots, and the whole-project roll-up multiplies by it.',
+    sfHeated:'Heated, air-conditioned square footage of the home on this lot.',
+    sfUnheated:'Garage, covered porches, decks and other unheated space, which costs less per foot.',
+    horizMonths:'Months from purchase to finished lots: subdivision approval, agency permitting, engineering, roads, utilities and any dock or amenity. Carry, interest and the preferred return all accrue through this phase, which is where subdivision deals most often lose money. Dock and shoreline permits in particular can run far longer than expected.',
+    buildMonths:'Months from start of construction to certificate of occupancy for this home.',
+    sellMonths:'Months the finished home is expected to sit on the market before closing.',
+    landPrice:'What the lot costs. If it is already owned, enter what it is worth today so the deal is judged honestly.',
+    parcelPrice:'Purchase price of the whole parent parcel before it is divided. It is spread across the lots using the allocation method you choose.',
+    landClosePct:'Closing costs on the purchase as a % of price: title, attorney, recording, survey.',
+    shEntitle:'Legal, planning and consulting work to subdivide: rezoning, plat approval, covenants, HOA or POA formation.',
+    shSurvey:'Boundary and topographic survey, plat preparation and recording fees.',
+    shEng:'Civil engineering and agency permitting for the project as a whole. On a marsh-front or beachfront parcel this includes state and federal review of any dock or walkway, which is slow and rarely cheap.',
+    shRoad:'Shared road, driveway easement, drainage and common area clearing.',
+    shUtil:'Extending water, sewer, power and other utilities to serve the lots, before individual lot taps.',
+    shAmenity:'The shared amenity: dock, cross-marsh walkway, boardwalk, beach access or pier. Enter the full construction cost; it is spread across the lots.',
+    shCommon:'Common landscaping, entry feature, signage and mailboxes.',
+    shOther:'Any other project-wide cost not listed above.',
+    shContPct:'Contingency on shared costs. Keep this higher than the vertical contingency: marsh, dock and infrastructure work carries more surprises than a house does.',
+    allocMethod:'How the shared costs above, including the parent parcel, are divided among the lots. Equal per lot is the simplest and the most common. Weighting by sale price makes the premium lots carry more of the amenity. Custom lets you enter this lot’s exact share.',
+    allSalePrice:'The combined expected sale price of every lot in the project, used to work out this lot’s weighted share.',
+    lotSf:'This lot’s size, in whatever unit you like, as long as it matches the next field.',
+    allLotSf:'The combined size of all lots, in the same unit as the field before it.',
+    customSharePct:'This lot’s share of shared costs as a percentage. With four lots carrying equal weight this would be 25%. Shares across all lots should add to 100%.',
+    clubInit:'One-time initiation, capital contribution or transfer fee owed to the club or POA when the lot changes hands, common in gated communities such as Palmetto Bluff, Berkeley Hall or Sea Pines. Enter what your side owes at closing. Leave at 0 if none.',
+    clubMonthly:'Ongoing club or community dues carried every month you own the lot, on top of any POA dues entered below. Leave at 0 if none, or if already counted in HOA dues.',
+    changeOrders:'Lump sum for change orders and allowance overages during construction: the lighting upgrade, the added built-ins, the finish the buyer wanted once framing was up. Enter your best estimate of the added cost. Leave at 0 for a pure spec with no buyer under contract.',
+    changeBilled:'What the buyer is billed for those change orders, collected at closing on top of the sale price. Enter the same figure as the cost line if the buyer pays all of it, less if you are absorbing part. Commission is usually not paid on this, so it is added after selling costs.',
+    ldSite:'Clearing, grading, fill and erosion control on this lot only.',
+    ldUtil:'Water, sewer, power, gas and irrigation taps and connections for this lot.',
+    ldSeptic:'Well, septic system or grinder or lift station if the lot is not on central service. Leave at 0 if not needed.',
+    ldDrive:'This lot’s driveway, culvert and access apron.',
+    ldPermit:'Building permit, plan review and impact or tap fees for this home. These vary widely by jurisdiction.',
+    ldSurvey:'Lot stakeout, foundation survey, elevation certificate and final as-built.',
+    ldOther:'Anything else specific to this lot: tree mitigation, geotechnical work, demolition.',
+    costHeated:'All-in construction cost per heated square foot, before builder fee, overhead and contingency. Use recent bids for comparable homes, not a rule of thumb.',
+    costUnheated:'Cost per square foot for garage, porches and decks. Usually 35–50% of the heated rate.',
+    iSite:'Sitework done at the start of vertical construction, beyond the lot development above.',
+    iFound:'Footings, foundation, slab or pilings, and waterproofing.',
+    iFrame:'Framing labor, lumber package, sheathing and trusses.',
+    iExt:'Roofing, siding, stucco or masonry, soffit and exterior trim.',
+    iWin:'Windows, exterior doors and garage doors.',
+    iPlumb:'Rough plumbing, fixtures and water heaters.',
+    iHvac:'Heating, cooling, ductwork and ventilation.',
+    iElec:'Rough electrical, fixtures, low voltage and prewire.',
+    iDry:'Insulation, drywall hang and finish.',
+    iTrim:'Interior doors, baseboards, casings, stair and ceiling detail.',
+    iCab:'Cabinetry, countertops and built-ins.',
+    iFloor:'Hardwood, tile, carpet and shower surrounds.',
+    iPaint:'Interior and exterior paint and stain.',
+    iAppl:'Appliance package, plumbing fixtures and light fixtures.',
+    iPool:'Pool, spa, outdoor kitchen and enclosure on this lot. Leave at 0 if none.',
+    iLand:'Landscaping, sod, plantings and irrigation on this lot.',
+    iHard:'Patios, walkways and other hardscape on this lot.',
+    softDesign:'Architectural plans, structural engineering and design fees for the home.',
+    softOther:'Anything else outside the construction contract: legal, accounting, entity formation, K-1 preparation, testing.',
+    warranty:'Held back for the first-year warranty, punch list and post-closing callbacks. Real on every build and usually missing from the pro forma. Charged at closing in this model.',
+    gcPct:'General conditions and overhead as a % of construction cost: supervision, temporary facilities, dumpsters, portable toilets, fuel. Enter 0 if that is already inside your line items.',
+    builderFeePct:'The builder’s fee, paid through the budget during the build. It is a markup on construction cost unless the deal question above says it is a margin on the contract price, in which case 15% means the fee is 15% of cost plus fee. Separate from the profit split at the end. Enter 0 if the builder is paid only from back-end profit.',
+    contPct:'Contingency as a % of construction, lot development and soft costs. 5–10% is normal. Under 5% on a custom home is optimistic.',
+    taxAnnual:'Annual property tax carried on this lot and home. In a subdivision, enter this lot’s share. The bill usually rises once the parcel is split and again once the house is finished. Tax calculator ↗ opens the Beaufort County Auditor’s calculator, where you can look up the real number by district; remember a spec is taxed at the 6% non-owner-occupied rate.',
+    insAnnual:'Annual builder’s risk and general liability for this lot. Coastal wind coverage raises this a lot.',
+    utilMonthly:'Monthly power, water and temporary utilities during construction and while listed.',
+    hoaMonthly:'Monthly HOA, POA or regime dues on this lot. Leave at 0 if none.',
+    ltcPct:'Loan as a % of total cost. Most spec and development lenders lend 60–80% of cost, and often less on raw land or horizontal work. The remainder is equity.',
+    rate:'Annual interest rate on the loan. Ask your lender for a current spec or development rate.',
+    loanTermMonths:'Months until the loan matures. If the project runs longer you are negotiating an extension, usually with a fee and sometimes a worse rate. The deal check flags it when the schedule runs past maturity.',
+    interestMode:'Whether interest is funded by an interest reserve inside the loan, normal on spec loans, which raises the payoff balance, or paid in cash each month, which raises the equity required and lowers the payoff.',
+    pointsPct:'Origination points charged by the lender as a % of the loan amount.',
+    lenderFees:'Flat lender, title, inspection and draw fees, in dollars.',
+    salePrice:'The price you expect this finished home to close at, not the list price. Use closed comparable sales.',
+    commPct:'Total real estate commission paid at closing, covering both sides as negotiated.',
+    sellerClosePct:'Seller closing costs as a % of price: deed stamps and transfer tax, attorney, title, prorations.',
+    marketing:'Staging, photography, drone, signage, advertising and open houses for this home.',
+    concessions:'Money set aside for buyer concessions, repairs or a rate buydown. Leave at 0 if none expected.',
+    builderCoPct:'The share of required equity the builder puts in alongside the investor. Enter 0 if the investor funds all of it. Builder capital earns the preferred return the same as investor capital.',
+    prefRate:'The preferred return, as an annual percentage of invested capital, accrued across the whole holding period and paid before any profit split. Paid after capital is returned, and not compounded here.',
+    splitBuilderPct:'The builder’s share of whatever profit remains after all capital and the preferred return are paid. The investor receives the rest.',
+    prefBasis:'Whether the preferred return accrues only on money actually drawn, which is the fairer and more common structure on a construction deal, or on the full commitment from day one, which favors the investor and costs the deal real money during a long entitlement phase.',
+    prefCompound:'Simple accrual adds the preferred return at a flat annual rate. Compounded annually rolls unpaid preferred return into the base each year, which matters on anything running past twelve months.',
+    investorTaxPct:'Optional. The investor\u2019s combined effective rate on this income, used only to show an after-tax figure. Spec building profit is usually ordinary income rather than long-term capital gain, and an active builder\u2019s share can carry self-employment tax too. Leave at 0 to show pre-tax only, and have a CPA confirm the real treatment.',
+    tProfit:'The least profit per home, in dollars, you would take this deal for.',
+    tMargin:'Profit as a % of sale price. Spec builders often want 15–20%; lenders often want at least 10–15%.',
+    tROC:'Profit as a % of total cost. A view that does not flatter a high sale price.',
+    tInv:'The investor\u2019s internal rate of return, which accounts for when money actually goes in and when it comes back. Most investors want something well above what a passive alternative pays, to justify construction risk.',
+    sellGapMonths:'Months between one home closing and the next. The first home closes after the marketing time above; each later home closes this many months after the one before it, and its carry and preferred return keep running until then.',
+    depositPct:'The share of the land price paid as a deposit on day one. The rest is paid at the land closing.',
+    landCloseMonth:'How many months after the deposit the balance of the land price is paid. In a subdivision this is usually when approvals are in hand. The preferred return accrues on the balance only from this month.',
+    commListPct:'The listing-side commission as a % of the sale price. It is still a cost to the deal, and it is shown as income to the party who lists the homes.',
+    commBuyerPct:'The commission paid to the buyer’s agent as a % of the sale price.',
+    hurdleIrr:'The annual return the investor must reach before the split changes. Below it, the first split percentage applies; above it, the second one does.',
+    splitAbovePct:'The share of profit above the investor’s hurdle that goes to the developer or builder. The investor receives the rest.',
+    deferFeePct:'The share of the builder fee that is not paid through the budget. It is paid at closing after the investor’s capital and preferred return, ahead of the profit split, and only if there is money to pay it.',
+    deferCommPct:'The share of the listing commission held back at closing and paid after the investor’s capital and preferred return, ahead of the profit split.',
+    dealNotes:'Anything a reader must know that the numbers do not show: who signs on the loan and whether it is recourse, who controls list price and timing, what happens on a cost overrun or a capital call, how long capital is locked, who holds title, and the plan if the home does not sell. These notes print with the analysis.'
+  };
+
+  var FIELDS = {};
+  SECTIONS.forEach(function(s){ s.fields.forEach(function(f){ FIELDS[f.id]=f; }); });
+
+  var state = { type:'single', fund:'equity', itemize:false, q:{}, comps:[[ '',0,0],['',0,0],['',0,0],['',0,0],['',0,0],['',0,0]] };
+  Object.keys(FIELDS).forEach(function(k){ state[k]=FIELDS[k].def; });
+
+  // ---------- Render ----------
+  var host = document.getElementById('inputs');
+  SECTIONS.forEach(function(s){
+    var sec=document.createElement('section');
+    if (s.show) sec.dataset.show=s.show;
+    sec.innerHTML='<div class="stop"><span class="num">'+('0'+(+s.n+1)).slice(-2)+'</span><h2>'+s.title+'</h2></div>';
+    if (s.itemize){
+      var sw=document.createElement('label'); sw.className='switch';
+      sw.innerHTML='<input type="checkbox" id="itemize"> Itemize the construction budget instead of using cost per square foot';
+      sec.appendChild(sw);
+    }
+    var grid=document.createElement('div'); grid.className='grid';
+    s.fields.forEach(function(f){
+      var w=document.createElement('div');
+      w.className='field'+(f.wide?' wide':'');
+      w.dataset.show=f.show||'both'; w.dataset.fid=f.id; if (f.grp) w.dataset.grp=f.grp;
+      var tip=TIPS[f.id];
+      var pre=f.type==='usd'?'<span>$</span>':'';
+      var suf=f.type==='pct'?'<span class="suf">%</span>':(f.suffix?'<span class="suf">'+f.suffix+'</span>':'');
+      var ctl;
+      if (f.type==='area'){
+        ctl='<textarea id="f_'+f.id+'" rows="4" placeholder="Recourse, control of price and timing, capital calls, lock-up, exit plan..."></textarea>';
+      } else if (f.type==='select'){
+        ctl='<select id="f_'+f.id+'">'+f.options.map(function(o){ return '<option value="'+o[0]+'">'+o[1]+'</option>'; }).join('')+'</select>';
+      } else {
+        var inputType=(f.type==='text'||f.type==='usd')?'text':'number';
+        var step=f.step||(f.type==='pct'?0.1:1);
+        ctl='<input id="f_'+f.id+'" type="'+inputType+'" '+(inputType==='number'?'inputmode="decimal" step="'+step+'" min="0"':(f.type==='usd'?'inputmode="decimal" autocomplete="off"':''))+'>';
+      }
+      w.innerHTML='<div class="lab"><label for="f_'+f.id+'">'+f.label+'</label>'+
+        (tip?'<button type="button" class="q" aria-label="What is '+f.label+'?" aria-expanded="false" aria-controls="t_'+f.id+'">?</button>':'')+'</div>'+
+        (tip?'<div class="pop" id="t_'+f.id+'" role="tooltip">'+tip+'</div>':'')+
+        '<div class="ctl">'+pre+ctl+suf+(f.link?'<a class="find no-print" href="'+f.link.href+'" target="_blank" rel="noopener">'+f.link.label+'</a>':'')+'</div>';
+      grid.appendChild(w);
+    });
+    sec.appendChild(grid);
+    if (s.n==='05'){
+      var n=document.createElement('div'); n.className='note';
+      n.innerHTML='<b>Shared costs are entered once for the whole project</b> and divided among the lots by the method chosen here. This page then analyzes one lot carrying its share. The whole-project roll-up in the results assumes the other lots perform the same way.';
+      sec.appendChild(n);
+    }
+    if (s.n==='13'){
+      var n2=document.createElement('div'); n2.className='note';
+      n2.innerHTML='<b>Order of payment at closing:</b> proceeds first repay any loan, then return every dollar of equity, then pay the accrued preferred return on that equity, then any deferred fees, and whatever is left is split. The builder fee and overhead are paid through the budget during the build, so they sit outside this split.';
+      sec.appendChild(n2);
+    }
+    host.appendChild(sec);
+    if (s.n==='11') host.appendChild(buildComps());
+  });
+
+  function buildComps(){
+    var sec=document.createElement('section');
+    sec.innerHTML='<div class="stop"><span class="num">13</span><h2>Comparable sales</h2></div>';
+    var wrap=document.createElement('div'); wrap.className='comps-wrap';
+    var h='<table class="comps"><tr><th>MLS #</th><th>Sold / list price</th><th>Heated sf</th><th>$ / sf</th><th></th></tr>';
+    for (var i=0;i<6;i++){
+      h+='<tr>'+
+        '<td><div class="ctl"><input id="cm_'+i+'" type="text" inputmode="numeric" autocomplete="off" aria-label="Comparable '+(i+1)+' MLS number"></div></td>'+
+        '<td><div class="ctl"><span>$</span><input id="cp_'+i+'" type="text" inputmode="decimal" autocomplete="off" aria-label="Comparable '+(i+1)+' price"></div></td>'+
+        '<td><div class="ctl"><input id="cs_'+i+'" type="number" inputmode="numeric" min="0" aria-label="Comparable '+(i+1)+' heated square feet"></div></td>'+
+        '<td class="psf" id="cx_'+i+'">–</td>'+
+        '<td><a class="open no-print" id="cl_'+i+'" target="_blank" rel="noopener" aria-disabled="true">Open ↗</a></td>'+
+        '</tr>';
+    }
+    wrap.innerHTML=h+'</table>';
+    sec.appendChild(wrap);
+    var n=document.createElement('div'); n.className='note';
+    n.innerHTML='<b>Enter the six closest comparables</b> by MLS number, with the price and heated square feet. Open ↗ pulls the listing up on search.sequelsc.com. The average price per foot and what it implies for this home appear in the results.';
+    sec.appendChild(n);
+    return sec;
+  }
+  var COMP_URL='https://search.sequelsc.com/idx/details/listing/c087/';
+
+  // ---------- Deal questions ----------
+  var QUESTIONS=[
+    {k:'sep', t:'Are the builder and the developer separate parties?', d:'Yes shows what each one earns on its own: the builder through the fee, the developer through the profit split.'},
+    {k:'list', t:'Does the developer list the homes and keep the listing-side commission?', d:'Yes splits the commission into the listing side, counted as income to the developer, and the buyer’s agent side.'},
+    {k:'cash', t:'Does the investor put in 100% of the cash?', d:'Yes removes any builder or developer co-investment. Their contribution is the deal and the work.'},
+    {k:'margin', t:'Is the builder’s fee quoted as a margin on the contract price?', d:'Yes treats the fee percentage as a margin on price instead of a markup on cost. A 15% margin equals a 17.65% markup.'},
+    {k:'allin', t:'Does the cost per square foot already include site work, shared costs and supervision?', d:'Yes ignores the shared-cost, lot-development, overhead and unheated-space lines so nothing is counted twice.'},
+    {k:'dep', t:'Is the land bought with a deposit first and the balance at a later closing?', d:'Yes adds the deposit percentage and the month the balance is paid. The preferred return then accrues only on money actually in.'},
+    {k:'tier', t:'Does the profit split change once the investor reaches a return hurdle?', d:'Yes adds a hurdle rate and a second split for profit above it.'},
+    {k:'defer', t:'Is part of the builder fee or listing commission deferred until the investor is paid?', d:'Yes holds back the share you enter and pays it after capital and the preferred return, ahead of the profit split.'},
+    {k:'stag', t:'Will the homes sell one after another instead of all at once?', d:'Yes adds the months between closings. Each later home carries cost and preferred return until its own closing.', multi:true}
+  ];
+  var QKEYS={}; QUESTIONS.forEach(function(x){ QKEYS[x.k]=1; });
+  var INC={}; ['shEntitle','shSurvey','shEng','shRoad','shUtil','shAmenity','shCommon','shOther','shContPct','ldSite','ldUtil','ldSeptic','ldDrive','ldPermit','ldSurvey','ldOther','gcPct','sfUnheated','costUnheated'].forEach(function(k){ INC[k]=1; });
+  var qsHost=document.getElementById('qs');
+  QUESTIONS.forEach(function(x){
+    var row=document.createElement('div'); row.className='qrow'; row.dataset.q=x.k; if (x.multi) row.dataset.multi='1';
+    row.innerHTML='<div><div class="qt">'+x.t+'</div><div class="qd">'+x.d+'</div></div>'+
+      '<div class="yn" role="group" aria-label="'+x.t+'"><button type="button" data-v="1" aria-pressed="false">Yes</button><button type="button" data-v="0" aria-pressed="true">No</button></div>';
+    qsHost.appendChild(row);
+  });
+  qsHost.addEventListener('click', function(e){
+    var b=e.target.closest('button[data-v]'); if(!b) return;
+    var k=b.closest('.qrow').dataset.q, on=b.dataset.v==='1';
+    readUI();
+    if (on && !state.q[k]){
+      // fill the fields this answer reveals with a sensible starting value
+      if (k==='list' && state.commListPct===FIELDS.commListPct.def && state.commBuyerPct===FIELDS.commBuyerPct.def){ state.commListPct=(state.commPct||0)/2; state.commBuyerPct=(state.commPct||0)/2; }
+      if (k==='dep' && state.landCloseMonth===FIELDS.landCloseMonth.def){ state.landCloseMonth = state.type==='multi' ? (state.horizMonths||0) : 0; }
+      if (k==='tier' && state.splitAbovePct===FIELDS.splitAbovePct.def){ state.splitAbovePct=Math.min((state.splitBuilderPct||0)+10,100); }
+    }
+    state.q[k]=on;
+    writeUI(); render(); try{ history.replaceState(null,'',toHash()); }catch(err){}
+  });
+
+  // ---------- Popovers ----------
+  var openPop=null;
+  function closePop(){ if(!openPop) return; openPop.pop.classList.remove('open'); openPop.btn.setAttribute('aria-expanded','false'); openPop=null; }
+  host.addEventListener('click', function(e){
+    var b=e.target.closest('.q'); if(!b) return;
+    e.preventDefault(); e.stopPropagation();
+    var pop=document.getElementById(b.getAttribute('aria-controls'));
+    if (openPop && openPop.btn===b){ closePop(); return; }
+    closePop();
+    pop.style.setProperty('--arrow', Math.max(b.offsetLeft+3,8)+'px');
+    pop.classList.add('open'); b.setAttribute('aria-expanded','true'); openPop={btn:b,pop:pop};
+  });
+  document.addEventListener('click', function(e){ if(openPop && !e.target.closest('.pop')) closePop(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ var b=openPop&&openPop.btn; closePop(); if(b) b.focus(); } });
+
+  // ---------- State ----------
+  function fmtUSDInput(v){ return (+v||0).toLocaleString('en-US',{maximumFractionDigits:2}); }
+  function readUI(){
+    Object.keys(FIELDS).forEach(function(k){
+      var el=document.getElementById('f_'+k), t=FIELDS[k].type;
+      if (t==='text'||t==='select'||t==='area') state[k]=el.value;
+      else { var v=parseFloat(String(el.value).replace(/[^0-9.]/g,'')); state[k]=isFinite(v)?v:0; }
+    });
+    state.itemize=document.getElementById('itemize').checked;
+    for (var i=0;i<6;i++){
+      var mls=(document.getElementById('cm_'+i).value||'').replace(/[^0-9A-Za-z-]/g,'').slice(0,20);
+      var pr=parseFloat(String(document.getElementById('cp_'+i).value).replace(/[^0-9.]/g,''));
+      var sf=parseFloat(document.getElementById('cs_'+i).value);
+      state.comps[i]=[mls, isFinite(pr)?pr:0, isFinite(sf)?sf:0];
+    }
+  }
+  function writeUI(){
+    Object.keys(FIELDS).forEach(function(k){
+      var t=FIELDS[k].type;
+      document.getElementById('f_'+k).value = t==='usd'?fmtUSDInput(state[k]):state[k];
+    });
+    document.getElementById('itemize').checked=!!state.itemize;
+    for (var i=0;i<6;i++){
+      document.getElementById('cm_'+i).value=state.comps[i][0]||'';
+      document.getElementById('cp_'+i).value=state.comps[i][1]?fmtUSDInput(state.comps[i][1]):'';
+      document.getElementById('cs_'+i).value=state.comps[i][2]||'';
+    }
+    applyMode();
+  }
+  function visible(show){
+    if (!show || show==='both') return true;
+    if (show==='single') return state.type==='single';
+    if (show==='multi') return state.type==='multi';
+    if (show==='loan') return state.fund==='loan';
+    if (show.indexOf('alloc-')===0) return state.type==='multi' && state.allocMethod===show.slice(6);
+    var q=state.q||{};
+    if (show==='q-list') return !!q.list;
+    if (show==='q-nolist') return !q.list;
+    if (show==='q-co') return !q.cash;
+    if (show==='q-dep') return !!q.dep;
+    if (show==='q-tier') return !!q.tier;
+    if (show==='q-defer') return !!q.defer;
+    if (show==='q-deferlist') return !!q.defer && !!q.list;
+    if (show==='q-stag') return state.type==='multi' && !!q.stag;
+    return true;
+  }
+  function applyMode(){
+    document.querySelectorAll('.mode').forEach(function(b){
+      var on = b.dataset.group==='type' ? b.dataset.mode===state.type : b.dataset.mode===state.fund;
+      b.setAttribute('aria-pressed', on?'true':'false');
+    });
+    document.querySelectorAll('#inputs .field').forEach(function(w){
+      var g=w.dataset.grp;
+      var okGrp = !g || (g==='items'?state.itemize:!state.itemize);
+      var inc = !!(state.q && state.q.allin) && !!INC[w.dataset.fid];
+      w.classList.toggle('hidden', !(visible(w.dataset.show) && okGrp) || inc);
+    });
+    document.querySelectorAll('#inputs section').forEach(function(sec){
+      var fs=sec.querySelectorAll('.field');
+      var any=[].some.call(fs, function(f){ return !f.classList.contains('hidden'); });
+      sec.classList.toggle('hidden', fs.length>0 && !any);
+    });
+    document.querySelectorAll('#qs .qrow').forEach(function(row){
+      var on=!!state.q[row.dataset.q];
+      row.querySelectorAll('button').forEach(function(b){ b.setAttribute('aria-pressed', ((b.dataset.v==='1')===on)?'true':'false'); });
+      row.classList.toggle('hidden', !!row.dataset.multi && state.type!=='multi');
+    });
+    var SPn = state.q.sep ? 'Developer' : 'Builder';
+    var setLab=function(id,txt){ var l=document.querySelector('label[for="f_'+id+'"]'); if (l) l.textContent=txt; };
+    setLab('builderCoPct', SPn+' share of the equity');
+    setLab('splitBuilderPct', SPn+' share of remaining profit'+(state.q.tier?' up to the hurdle':''));
+    setLab('splitAbovePct', SPn+' share above the hurdle');
+    setLab('commListPct', 'Listing commission kept by the '+SPn.toLowerCase());
+    setLab('builderFeePct', state.q.margin ? 'Builder fee (margin on contract price)' : 'Builder fee (markup on construction cost)');
+    var dw=document.getElementById('delayWhat'), hzOpt=dw.querySelector('option[value="hz"]');
+    hzOpt.hidden = hzOpt.disabled = state.type!=='multi';
+    if (state.type!=='multi' && dw.value==='hz') dw.value='sell';
+    document.getElementById('rollupPanel').classList.toggle('hidden', state.type!=='multi');
+    document.getElementById('resTitle').textContent = 'Deal summary · '+(state.type==='multi'?'One lot of '+(state.lotCount||1):'Single build')+' · '+(state.fund==='loan'?'Loan + equity':'All equity');
+  }
+
+  // ---------- Math ----------
+  function computeLot(s){
+    var p=function(x){ return (x||0)/100; };
+    var q=s.q||{};
+    var multi = s.type==='multi';
+    var hz = multi ? Math.max(Math.round(s.horizMonths)||0,0) : 0;
+    var bm = Math.max(Math.round(s.buildMonths)||0,0);
+    var sm = Math.max(Math.round(s.sellMonths)||0,0);
+    var months = hz+bm+sm;
+
+    var share = 1;
+    if (multi){
+      if (s.allocMethod==='price') share = s.allSalePrice>0 ? s.salePrice/s.allSalePrice : 0;
+      else if (s.allocMethod==='size') share = s.allLotSf>0 ? s.lotSf/s.allLotSf : 0;
+      else if (s.allocMethod==='custom') share = p(s.customSharePct);
+      else share = s.lotCount>0 ? 1/s.lotCount : 1;
+      share = Math.max(Math.min(share,1),0);
+    }
+
+    // "all-in" cost per foot: shared, lot-development, overhead and unheated lines are ignored
+    var allin = !!q.allin;
+    var sharedRaw = allin ? 0 : (s.shEntitle+s.shSurvey+s.shEng+s.shRoad+s.shUtil+s.shAmenity+s.shCommon+s.shOther);
+    var sharedWithCont = sharedRaw*(1+p(s.shContPct));
+    var parcel = multi ? s.parcelPrice*(1+p(s.landClosePct)) : 0;
+    var sharedTotal = multi ? (parcel + sharedWithCont) : 0;
+    var landCost = multi ? sharedTotal*share : s.landPrice*(1+p(s.landClosePct));
+    var parcelShare = multi ? parcel*share : landCost;
+    var infraShare = multi ? sharedWithCont*share : 0;
+
+    var mult = s._hardMult||1;
+    var hard = (s.itemize
+      ? ['iSite','iFound','iFrame','iExt','iWin','iPlumb','iHvac','iElec','iDry','iTrim','iCab','iFloor','iPaint','iAppl','iPool','iLand','iHard'].reduce(function(a,k){ return a+(s[k]||0); },0)
+      : s.sfHeated*s.costHeated + (allin ? 0 : s.sfUnheated*s.costUnheated)) * mult;
+    var clubInit = s.clubInit||0;
+    var lotDev = (allin ? 0 : (s.ldSite+s.ldUtil+s.ldSeptic+s.ldDrive+s.ldPermit+s.ldSurvey+s.ldOther)) + clubInit;
+    var warranty = s.warranty||0;
+    var soft = s.softDesign+s.softOther+warranty;
+    var overhead = allin ? 0 : hard*p(s.gcPct);
+    // builder fee: markup on cost, or a margin on the contract price (cost + fee)
+    var fm = p(s.builderFeePct);
+    var fee = q.margin ? (fm<0.95 ? (hard+overhead)*fm/(1-fm) : 0) : hard*fm;
+    var contingency = (hard+lotDev+soft+overhead)*p(s.contPct);
+    var carryMonthly = (s.taxAnnual+s.insAnnual)/12 + s.utilMonthly + s.hoaMonthly + (s.clubMonthly||0);
+    var carry = carryMonthly*months;
+    var changeCost = s.changeOrders||0, changeRev = s.changeBilled||0;
+
+    // commission: one figure, or a listing side kept by the developer plus a buyer's-agent side
+    var listPct = q.list ? p(s.commListPct) : 0;
+    var commAll = q.list ? p(s.commListPct)+p(s.commBuyerPct) : p(s.commPct);
+    var listComm = s.salePrice*listPct;
+    var sellingCost = s.salePrice*(commAll+p(s.sellerClosePct)) + s.marketing + s.concessions;
+
+    // deferred fees: not paid through the budget or at closing; paid after capital and preferred return
+    var deferFee = q.defer ? fee*Math.min(p(s.deferFeePct),1) : 0;
+    var deferComm = (q.defer && q.list) ? listComm*Math.min(p(s.deferCommPct),1) : 0;
+    var deferred = deferFee + deferComm;
+
+    var costBeforeFinance = landCost + lotDev + hard + changeCost + overhead + fee + soft + contingency + carry;
+
+    // ---- monthly cost schedule (drives interest, equity timing, pref accrual and IRR) ----
+    var N = Math.max(months,1);
+    var cost = new Array(N+1); for (var t=0;t<=N;t++) cost[t]=0;
+    cost[0] += clubInit + s.softDesign;                        // club fee and design up front
+    if (q.dep){
+      var dpc = Math.min(p(s.depositPct),1);
+      var closeM = Math.min(Math.max(Math.round(s.landCloseMonth)||0,0),N);
+      cost[0] += parcelShare*dpc;                               // deposit
+      cost[closeM] += parcelShare*(1-dpc);                      // balance at the land closing
+    } else {
+      cost[0] += parcelShare;                                   // land up front
+    }
+    var buildStart = hz;
+    if (multi && infraShare>0){ var hzN=Math.max(hz,1); for (var t=0;t<hzN;t++) cost[Math.min(t,N)] += infraShare/hzN; }
+    var lotRest = lotDev - clubInit;
+    var devN = Math.max(Math.min(2,bm||1),1);
+    for (var t=0;t<devN;t++) cost[Math.min(buildStart+t,N)] += lotRest/devN;
+    var vertical = hard + overhead + (fee-deferFee) + changeCost + contingency + s.softOther;
+    var bN = Math.max(bm,1);
+    for (var t=0;t<bN;t++) cost[Math.min(buildStart+t,N)] += vertical/bN;
+    for (var t=0;t<N;t++) cost[t] += carryMonthly;
+    cost[N] += warranty;                                        // held back at closing
+
+    var useLoan = s.fund==='loan';
+    var loanCap = useLoan ? costBeforeFinance*p(s.ltcPct) : 0;
+    var points = useLoan ? loanCap*p(s.pointsPct) : 0;
+    var lenderFees = useLoan ? s.lenderFees : 0;
+    var mRate = p(s.rate)/12;
+    var reserve = (s.interestMode||'reserve')==='reserve';
+
+    var bal=0, drawn=0, interest=0, capInterest=0;
+    var eq = new Array(N+1); for (var t=0;t<=N;t++) eq[t]=0;
+    for (var t=0;t<=N;t++){
+      var int_t = useLoan ? bal*mRate : 0;
+      interest += int_t;
+      if (useLoan && reserve){ bal += int_t; capInterest += int_t; }
+      var draw = 0;
+      if (useLoan){ draw = Math.min(cost[t]*p(s.ltcPct), Math.max(loanCap-drawn,0)); drawn += draw; bal += draw; }
+      eq[t] = cost[t] - draw + (useLoan && !reserve ? int_t : 0) + (t===0 ? points+lenderFees : 0);
+    }
+    var financing = points + lenderFees + interest;
+    var totalCost = costBeforeFinance + financing;
+    var payoff = drawn + capInterest;
+    var equity = eq.reduce(function(a,b){ return a+b; },0);
+
+    var netProceeds = s.salePrice - sellingCost + changeRev;
+    var profit = netProceeds - totalCost;
+    var cashAtClose = netProceeds - payoff + deferComm;
+
+    // ---- preferred return accrued on the schedule ----
+    var basisDrawn = (s.prefBasis||'drawn')==='drawn';
+    var compound = (s.prefCompound||'simple')==='annual';
+    var cum=0, accrued=0, rolled=0;
+    for (var t=0;t<=N;t++){
+      var base = basisDrawn ? cum : equity;
+      accrued += (base + (compound?rolled:0))*p(s.prefRate)/12;
+      cum += eq[t];
+      if (compound && t>0 && t%12===0){ rolled = accrued; }
+    }
+    var prefDue = accrued;
+
+    var coPct = q.cash ? 0 : p(s.builderCoPct);
+    var builderCap = equity*coPct;
+    var investorCap = equity - builderCap;
+    var invShare = equity>0 ? investorCap/equity : 0;
+    var capitalReturned = Math.min(cashAtClose, equity);
+    var afterCapital = Math.max(cashAtClose - equity, 0);
+    var prefPaid = Math.min(afterCapital, prefDue);
+    var afterPref = Math.max(afterCapital - prefPaid, 0);
+    var deferredPaid = Math.min(afterPref, deferred);
+    var deferFeePaid = deferred>0 ? deferredPaid*deferFee/deferred : 0;
+    var deferCommPaid = deferred>0 ? deferredPaid*deferComm/deferred : 0;
+    var residual = Math.max(afterPref - deferredPaid, 0);
+
+    // ---- profit split, with an optional second tier above an investor return hurdle ----
+    var s1 = Math.min(p(s.splitBuilderPct),1);
+    var tier1 = residual, tier2 = 0;
+    if (q.tier){
+      var hm = Math.pow(1+p(s.hurdleIrr),1/12)-1, need=0;
+      for (var t=0;t<=N;t++) need += eq[t]*invShare*Math.pow(1+hm, N-t);
+      var got = investorCap + prefPaid*invShare;
+      var toHurdle = (1-s1)>0 ? Math.max((need-got)/(1-s1),0) : Infinity;
+      tier1 = Math.min(residual, toHurdle); tier2 = residual - tier1;
+    }
+    var builderResidual = tier1*s1 + (q.tier ? tier2*Math.min(p(s.splitAbovePct),1) : 0);
+    var investorResidual = residual - builderResidual;
+    var shortfall = Math.min(cashAtClose - equity, 0);
+
+    var investorProfit = prefPaid*invShare + investorResidual + shortfall*invShare;
+    var builderProfit = prefPaid*(1-invShare) + builderResidual + shortfall*(1-invShare);   // the sponsor's split
+    var feePaid = fee - deferFee + deferFeePaid;
+    var listPaid = listComm - deferComm + deferCommPaid;
+    var sep = !!q.sep;
+    var builderTake = feePaid + overhead + (sep ? 0 : builderProfit + listPaid);
+    var developerTake = sep ? builderProfit + listPaid : 0;
+    var builderTotal = builderTake;
+    var investorAnnual = (investorCap>0 && months>0) ? (investorProfit/investorCap)/(months/12) : 0;
+
+    // ---- investor IRR and equity multiple from the monthly flows ----
+    var flows=[]; for (var t=0;t<=N;t++) flows.push(-eq[t]*invShare);
+    var investorDist = investorCap + investorProfit;
+    flows[N] += investorDist;
+    var irr = solveIRR(flows);
+    var multiple = investorCap>0 ? investorDist/investorCap : 0;
+    var taxRate = p(s.investorTaxPct||0);
+    var afterTaxProfit = investorProfit>0 ? investorProfit*(1-taxRate) : investorProfit;
+    var afterTaxFlows = flows.slice(); afterTaxFlows[N] = flows[N] - (investorProfit>0 ? investorProfit*taxRate : 0);
+    var irrAfterTax = solveIRR(afterTaxFlows);
+
+    var headroomPref = Math.max(profit + deferred - prefDue, 0);
+    var headroomCapital = Math.max(profit + deferred, 0);
+    var lots = multi ? Math.max(Math.round(s.lotCount)||1,1) : 1;
+    var loanMaturityRisk = useLoan && s.loanTermMonths>0 && months > s.loanTermMonths;
+
+    return {
+      multi:multi, lots:lots, share:share, months:months, hz:hz, bm:bm, sm:sm,
+      sharedRaw:sharedRaw, sharedWithCont:sharedWithCont, parcel:parcel, sharedTotal:sharedTotal,
+      landCost:landCost, lotDev:lotDev, hard:hard, soft:soft, warranty:warranty, overhead:overhead, fee:fee,
+      changeCost:changeCost, changeRev:changeRev, clubInit:clubInit,
+      contingency:contingency, carry:carry, financing:financing, points:points, lenderFees:lenderFees,
+      interest:interest, capInterest:capInterest, drawn:drawn, payoff:payoff, loanCap:loanCap,
+      equity:equity, investorCap:investorCap, builderCap:builderCap, totalCost:totalCost,
+      costBeforeFinance:costBeforeFinance, sellingCost:sellingCost, netProceeds:netProceeds, profit:profit,
+      cashAtClose:cashAtClose, capitalReturned:capitalReturned, prefDue:prefDue, prefPaid:prefPaid,
+      residual:residual, investorProfit:investorProfit, builderProfit:builderProfit,
+      investorResidual:investorResidual, investorAnnual:investorAnnual, builderTotal:builderTotal,
+      investorDist:investorDist, irr:irr, irrAfterTax:irrAfterTax, multiple:multiple,
+      afterTaxProfit:afterTaxProfit, taxRate:taxRate,
+      headroomPref:headroomPref, headroomCapital:headroomCapital, loanMaturityRisk:loanMaturityRisk,
+      listComm:listComm, listPaid:listPaid, commAll:commAll, feePaid:feePaid,
+      deferFee:deferFee, deferComm:deferComm, deferred:deferred, deferredPaid:deferredPaid,
+      tier1:tier1, tier2:tier2, builderTake:builderTake, developerTake:developerTake, flows:flows,
+      margin: s.salePrice>0 ? profit/s.salePrice : 0,
+      roc: totalCost>0 ? profit/totalCost : 0,
+      psf: s.sfHeated>0 ? totalCost/s.sfHeated : 0,
+      breakeven: (1-commAll-p(s.sellerClosePct))>0 ? (totalCost+s.marketing+s.concessions-changeRev)/(1-commAll-p(s.sellerClosePct)) : 0
+    };
+  }
+
+  // One lot, plus the whole project. When homes sell one after another, each later lot is
+  // run with its own longer marketing time and the results are added up.
+  function compute(s){
+    var r = computeLot(s), q = s.q||{};
+    var gap = (r.multi && q.stag) ? Math.max(Math.round(s.sellGapMonths)||0,0) : 0;
+    var P = {lots:r.lots, gap:gap, months:r.months, totalCost:0, sales:0, profit:0, equity:0, investorCap:0, investorDist:0,
+             investorProfit:0, sponsorProfit:0, builderTake:0, developerTake:0, residual:0, prefDue:0, prefPaid:0};
+    var flows=[];
+    for (var i=0;i<r.lots;i++){
+      var x = (i===0 || gap===0) ? r : computeLot(Object.assign({}, s, {sellMonths:(s.sellMonths||0)+i*gap}));
+      P.totalCost+=x.totalCost; P.sales+=s.salePrice; P.profit+=x.profit; P.equity+=x.equity;
+      P.investorCap+=x.investorCap; P.investorDist+=x.investorDist; P.investorProfit+=x.investorProfit;
+      P.sponsorProfit+=x.builderProfit; P.builderTake+=x.builderTake; P.developerTake+=x.developerTake;
+      P.residual+=x.residual; P.prefDue+=x.prefDue; P.prefPaid+=x.prefPaid;
+      P.months=Math.max(P.months,x.months);
+      for (var t=0;t<x.flows.length;t++) flows[t]=(flows[t]||0)+x.flows[t];
+    }
+    P.irr = solveIRR(flows);
+    P.multiple = P.investorCap>0 ? P.investorDist/P.investorCap : 0;
+    r.proj = P;
+    return r;
+  }
+
+  function npv(flows, r){ var v=0; for (var t=0;t<flows.length;t++) v += flows[t]/Math.pow(1+r,t); return v; }
+  function solveIRR(flows){
+    var pos=false, neg=false;
+    flows.forEach(function(f){ if (f>0.01) pos=true; if (f<-0.01) neg=true; });
+    if (!pos || !neg) return null;
+    var lo=-0.95, hi=1.0;
+    if (npv(flows,lo)*npv(flows,hi)>0) return null;
+    for (var i=0;i<200;i++){
+      var mid=(lo+hi)/2;
+      if (npv(flows,lo)*npv(flows,mid)<=0) hi=mid; else lo=mid;
+    }
+    var m=(lo+hi)/2;
+    var annual=Math.pow(1+m,12)-1;
+    return isFinite(annual)?annual:null;
+  }
+
+  function usd(x,dp){ var n=x<0; var v=Math.abs(x).toLocaleString('en-US',{maximumFractionDigits:dp||0,minimumFractionDigits:dp||0}); return (n?'−$':'$')+v; }
+  function pct(x,dp){ var t=(Math.abs(x)*100).toFixed(dp==null?1:dp)+'%'; return (x<0 && parseFloat(t)!==0?'−':'')+t; }
+
+  function rows(id, list){
+    var h='<tr><th></th><th>Amount</th></tr>';
+    list.forEach(function(l){
+      if (l.sect){ h+='<tr class="sect"><td colspan="2">'+l.sect+'</td></tr>'; return; }
+      var cls=l.cls||'', neg=(l.v<0&&(cls==='total'||cls==='sub'))?' neg':'';
+      h+='<tr class="'+cls+'"><td>'+l.k+'</td><td class="'+neg+'">'+(l.txt||usd(l.v))+'</td></tr>';
+    });
+    document.getElementById(id).innerHTML=h;
+  }
+
+  function render(){
+    var s=state, r=compute(s);
+    var Q=s.q||{}, sep=!!Q.sep, SP=sep?'Developer':'Builder', P=r.proj;
+    var kp=document.getElementById('kProfit'); kp.textContent=usd(r.profit); kp.classList.toggle('neg', r.profit<0);
+    var km=document.getElementById('kMargin'); km.textContent=pct(r.margin); km.classList.toggle('neg', r.margin<0);
+    document.getElementById('kCost').textContent=usd(r.totalCost);
+    document.getElementById('kPsf').textContent=usd(r.psf)+' / sf';
+
+    var b=[{sect: r.multi ? 'Cost for this lot' : 'Project cost'}];
+    if (r.multi) b.push({k:'Share of land & shared costs ('+pct(r.share)+')', v:r.landCost});
+    else b.push({k:'Lot & closing', v:r.landCost});
+    b.push({k:'Lot development', v:r.lotDev});
+    b.push({k:'Construction', v:r.hard});
+    if (r.changeCost) b.push({k:'Change orders & allowance overages', v:r.changeCost});
+    b.push({k:'General conditions / overhead', v:r.overhead});
+    b.push({k:'Builder fee'+(Q.margin?' ('+(s.builderFeePct||0)+'% margin on price)':''), v:r.fee});
+    b.push({k:'Soft costs', v:r.soft});
+    b.push({k:'Contingency', v:r.contingency});
+    b.push({k:'Carry ('+r.months+' months)', v:r.carry});
+    if (s.fund==='loan') b.push({k:'Loan interest, points & fees', v:r.financing});
+    b.push({k:'Total cost', v:r.totalCost, cls:'sub'});
+    b.push({sect:'Sale'});
+    b.push({k:'Sale price', v:s.salePrice});
+    b.push({k:'Commission, closing, marketing', v:-r.sellingCost});
+    if (r.changeRev) b.push({k:'Change orders billed to buyer', v:r.changeRev});
+    b.push({k:'Net sale proceeds', v:r.netProceeds, cls:'sub'});
+    b.push({k:'Profit on this home', v:r.profit, cls:'total'});
+    rows('budget', b);
+
+    if (r.multi){
+      var u=[{sect:'Shared costs, counted once'},
+        {k:'Parent parcel & closing', v:r.parcel},
+        {k:'Site, infrastructure & amenity (with contingency)', v:r.sharedWithCont},
+        {k:'Total shared', v:r.sharedTotal, cls:'sub'},
+        {sect:'All '+r.lots+' lots'},
+        {k:'Total project cost', v:P.totalCost},
+        {k:'Total sales', v:P.sales},
+        {k:'Total profit', v:P.profit, cls:'sub'},
+        {k:'Investor capital required', v:P.investorCap},
+        {k:'Investor total', v:P.investorProfit}];
+      if (P.gap>0){
+        u.push({k:'Investor IRR, whole project', v:0, txt:(P.irr==null?'n/a':pct(P.irr))+' · '+(P.multiple||0).toFixed(2)+'×'});
+        u.push({k:'Last home closes in month', v:0, txt:String(P.months)});
+      }
+      if (sep){
+        u.push({k:'Builder total (fee & overhead)', v:P.builderTake});
+        u.push({k:'Developer total (split'+(Q.list?' & listing commission':'')+')', v:P.developerTake, cls:'total'});
+      } else {
+        u.push({k:'Builder total (fee, overhead'+(Q.list?', commission':'')+' & split)', v:P.builderTake, cls:'total'});
+      }
+      rows('rollup', u);
+    }
+
+    var w=[{sect:'Funding this home'}];
+    if (s.fund==='loan') w.push({k:'Loan', v:r.drawn});
+    w.push({k:'Investor equity', v:r.investorCap});
+    if (r.builderCap>0) w.push({k:SP+' equity', v:r.builderCap});
+    w.push({sect:'Proceeds at closing'});
+    if (s.fund==='loan') w.push({k:'Repay loan', v:-r.payoff});
+    w.push({k:'Return of capital', v:r.capitalReturned});
+    w.push({k:'Preferred return ('+pct((s.prefRate||0)/100)+' for '+r.months+' months)', v:r.prefPaid, txt: r.prefPaid<r.prefDue-0.5 ? usd(r.prefPaid)+' of '+usd(r.prefDue) : usd(r.prefPaid)});
+    if (r.deferred>0.5) w.push({k:'Deferred fees', v:r.deferredPaid, txt: r.deferredPaid<r.deferred-0.5 ? usd(r.deferredPaid)+' of '+usd(r.deferred) : usd(r.deferredPaid)});
+    w.push({k:'Remaining profit to split', v:r.residual});
+    if (Q.tier){
+      w.push({k:'Split up to the '+(s.hurdleIrr||0)+'% hurdle', v:r.tier1});
+      w.push({k:'Split above the hurdle', v:r.tier2});
+    }
+    w.push({sect:'Who gets what'});
+    w.push({k:'Investor — preferred + split', v:r.investorProfit});
+    w.push({k:'Investor — annual return', v:r.investorAnnual, txt:pct(r.investorAnnual)});
+    w.push({k:SP+' — profit split', v:r.builderProfit});
+    if (Q.list) w.push({k:SP+' — listing commission', v:r.listPaid});
+    if (sep){
+      w.push({k:'Builder — fee & overhead', v:r.builderTake, cls:'sub'});
+      w.push({k:'Developer — split'+(Q.list?' & commission':''), v:r.developerTake, cls:'total'});
+    } else {
+      w.push({k:'Builder — fee, overhead'+(Q.list?', commission':'')+' & split', v:r.builderTotal, cls:'total'});
+    }
+    rows('waterfall', w);
+
+    document.getElementById('kIrr').textContent = r.irr==null?'n/a':pct(r.irr);
+    document.getElementById('kIrr').classList.toggle('neg', r.irr!=null && r.irr<0);
+    document.getElementById('kMult').textContent = (r.multiple||0).toFixed(2)+'×';
+    document.getElementById('kMult').classList.toggle('neg', r.multiple<1);
+    var ret=[{sect:'Investor'},
+      {k:'Capital in', v:r.investorCap},
+      {k:'Cash back at closing', v:r.investorDist, cls:'sub'},
+      {k:'Profit to investor', v:r.investorProfit},
+      {k:'Preferred return accrued', v:r.prefDue, txt: r.prefPaid<r.prefDue-0.5 ? usd(r.prefPaid)+' paid of '+usd(r.prefDue) : usd(r.prefDue)},
+      {k:'IRR / simple annual', v:0, txt:(r.irr==null?'n/a':pct(r.irr))+' / '+pct(r.investorAnnual)},
+      {k:'Months capital is tied up', v:0, txt:r.months+' months'}];
+    if (r.taxRate>0) ret.push({k:'After tax at '+pct(r.taxRate,0), v:r.afterTaxProfit, txt:usd(r.afterTaxProfit)+' · '+(r.irrAfterTax==null?'n/a':pct(r.irrAfterTax))+' IRR'});
+    ret.push({sect:'Builder'});
+    ret.push({k:'Fee & overhead through the budget', v:r.fee-r.deferFee+r.overhead});
+    if (r.deferFee>0.5) ret.push({k:'Deferred fee paid at closing', v:r.feePaid-(r.fee-r.deferFee), txt: usd(r.feePaid-(r.fee-r.deferFee))+' of '+usd(r.deferFee)});
+    if (sep){
+      ret.push({k:'Builder total', v:r.builderTake, cls:'sub'});
+      ret.push({sect:'Developer'});
+      ret.push({k:'Profit split', v:r.builderProfit});
+      if (Q.list) ret.push({k:'Listing commission', v:r.listPaid, txt: r.deferComm>0.5 ? usd(r.listPaid)+' of '+usd(r.listComm) : usd(r.listPaid)});
+      ret.push({k:'Developer total', v:r.developerTake, cls:'total'});
+    } else {
+      ret.push({k:'Profit split', v:r.builderProfit});
+      if (Q.list) ret.push({k:'Listing commission', v:r.listPaid});
+      ret.push({k:'Builder total', v:r.builderTotal, cls:'total'});
+    }
+    rows('returns', ret);
+
+    var src=[{sect:'Uses'},
+      {k:'Land & shared costs', v:r.landCost},
+      {k:'Lot development', v:r.lotDev},
+      {k:'Construction, overhead, fee & change orders', v:r.hard+r.overhead+r.fee+r.changeCost},
+      {k:'Soft costs, warranty & contingency', v:r.soft+r.contingency},
+      {k:'Carry', v:r.carry}];
+    if (s.fund==='loan') src.push({k:'Financing (points, fees, interest)', v:r.financing});
+    src.push({k:'Total uses', v:r.totalCost, cls:'sub'});
+    if (r.deferFee>0.5) src.push({k:'Less builder fee deferred to closing', v:-r.deferFee});
+    src.push({sect:'Sources'});
+    if (s.fund==='loan'){
+      src.push({k:'Loan drawn', v:r.drawn});
+      if (r.capInterest>0.5) src.push({k:'Interest added to the loan', v:r.capInterest});
+      src.push({k:'Loan payoff at closing', v:r.payoff, cls:'sub'});
+    }
+    src.push({k:'Investor equity', v:r.investorCap});
+    if (r.builderCap>0) src.push({k:SP+' equity', v:r.builderCap});
+    src.push({k:'Total equity', v:r.equity, cls:'total'});
+    rows('sources', src);
+
+    var checks=[
+      ['Profit '+usd(r.profit)+' vs '+usd(s.tProfit)+' target', r.profit>=s.tProfit],
+      ['Margin '+pct(r.margin)+' vs '+s.tMargin+'% target', r.margin>=s.tMargin/100],
+      ['Return on cost '+pct(r.roc)+' vs '+s.tROC+'% target', r.roc>=s.tROC/100],
+      ['Investor IRR '+(r.irr==null?'n/a':pct(r.irr))+' vs '+s.tInv+'% target', r.irr!=null && r.irr>=s.tInv/100],
+      ['Preferred return paid in full', r.prefPaid>=r.prefDue-0.5]
+    ];
+    var ch='', pass=0;
+    checks.forEach(function(c){ if(c[1]) pass++; ch+='<li><span>'+c[0]+'</span><span class="chip '+(c[1]?'y':'n')+'">'+(c[1]?'Meets':'Misses')+'</span></li>'; });
+    ch+='<li><span>Break-even sale price: <b>'+usd(r.breakeven)+'</b> ('+pct((r.breakeven-s.salePrice)/(s.salePrice||1))+' from your price)</span><span></span></li>';
+    ch+='<li><span>Costs can run over by <b>'+usd(r.headroomPref)+'</b> ('+pct(r.totalCost>0?r.headroomPref/r.totalCost:0)+') before the preferred return is short, and <b>'+usd(r.headroomCapital)+'</b> before capital is impaired.</span><span></span></li>';
+    ch+='<li><span>Upside if the contingency is never spent: <b>'+usd(r.contingency)+'</b></span><span></span></li>';
+    if (r.loanMaturityRisk) ch+='<li><span>Schedule runs '+(r.months-s.loanTermMonths)+' months past loan maturity — an extension will be needed.</span><span class="chip n">Risk</span></li>';
+    if (r.prefPaid<r.prefDue-0.5) ch+='<li><span>Proceeds do not cover the full preferred return; the shortfall carries or is forgiven per the agreement.</span><span class="chip n">Risk</span></li>';
+    if (r.multi && s.allocMethod!=='equal'){
+      ch+='<li><span>Shared-cost share for this lot: <b>'+pct(r.share)+'</b>. Shares across all lots should add to 100%.</span><span></span></li>';
+    }
+    document.getElementById('checks').innerHTML=ch;
+
+    var v=document.getElementById('verdict');
+    if (pass===checks.length){ v.style.background='var(--good-bg)'; v.style.color='var(--good)'; v.textContent='Meets all '+checks.length+' targets.'; }
+    else if (pass===0){ v.style.background='var(--bad-bg)'; v.style.color='var(--bad)'; v.textContent='Misses all '+checks.length+' targets at these numbers.'; }
+    else { v.style.background='var(--neutral-bg)'; v.style.color='var(--ink)'; v.textContent='Meets '+pass+' of '+checks.length+' targets.'; }
+
+    var h='<tr><th>Sale price</th><th>Profit</th><th>Margin</th><th>Investor / yr</th><th>'+SP+' split</th>'+(r.multi?'<th>Project profit</th>':'')+'<th>Profit if 3 months longer</th></tr>';
+    [-10,-5,0,5,10].forEach(function(d){
+      var a=Object.assign({},s); a.salePrice=s.salePrice*(1+d/100);
+      var x=compute(a);
+      var c=Object.assign({},a); c.sellMonths=(s.sellMonths||0)+3;
+      var y=compute(c);
+      h+='<tr><td>'+usd(a.salePrice)+(d===0?' (base)':' ('+(d>0?'+':'')+d+'%)')+'</td>'+
+         '<td class="'+(x.profit<0?'neg':'')+'">'+usd(x.profit)+'</td><td>'+pct(x.margin)+'</td>'+
+         '<td class="'+(x.investorAnnual<0?'neg':'')+'">'+pct(x.investorAnnual)+'</td>'+
+         '<td class="'+(x.builderProfit<0?'neg':'')+'">'+usd(x.builderProfit)+'</td>'+
+         (r.multi?'<td class="'+(x.proj.profit<0?'neg':'')+'">'+usd(x.proj.profit)+'</td>':'')+
+         '<td class="'+(y.profit<0?'neg':'')+'">'+usd(y.profit)+'</td></tr>';
+    });
+    document.getElementById('sens').innerHTML=h;
+
+    var g='<tr><th>Sale price \\ construction cost</th><th>On budget</th><th>+5%</th><th>+10%</th><th>+15%</th></tr>';
+    [-10,-5,0,5].forEach(function(d){
+      g+='<tr><td>'+usd(s.salePrice*(1+d/100))+(d===0?' (base)':' ('+(d>0?'+':'')+d+'%)')+'</td>';
+      [0,5,10,15].forEach(function(o){
+        var a=Object.assign({},s); a.salePrice=s.salePrice*(1+d/100); a._hardMult=1+o/100;
+        var x=compute(a);
+        var cls = x.profit<0 ? 'neg' : '';
+        g+='<td class="'+cls+'">'+usd(x.profit)+'</td>';
+      });
+      g+='</tr>';
+    });
+    document.getElementById('grid').innerHTML=g;
+
+    renderComps(r);
+    renderDelay(s);
+  }
+
+  // ---------- Time test: what a delay costs ----------
+  function renderDelay(s){
+    var Q=s.q||{}, sep=!!Q.sep, SP=sep?'Developer':'Builder';
+    var what=document.getElementById('delayWhat').value;
+    var d=Math.max(parseInt(document.getElementById('delayMonths').value,10)||0,0);
+    function at(m){
+      var a=Object.assign({},s);
+      if (what==='build') a.buildMonths=(s.buildMonths||0)+m;
+      else if (what==='hz' && s.type==='multi'){ a.horizMonths=(s.horizMonths||0)+m; if (Q.dep) a.landCloseMonth=(s.landCloseMonth||0)+m; }
+      else a.sellMonths=(s.sellMonths||0)+m;
+      return compute(a).proj;
+    }
+    function sp(P){ return sep ? P.developerTake : P.sponsorProfit; }
+    var spLab = sep ? 'Developer total' : 'Builder profit split';
+    var base=at(0), cur=at(d);
+    document.getElementById('delayVal').textContent = d===0 ? 'On time' : '+'+d+(d===1?' month':' months');
+
+    function delta(v){ return d===0 ? 'on-time plan' : (v>0?'+':'')+usd(v)+' vs on time'; }
+    var irrTxt=function(P){ return P.irr==null?'n/a':pct(P.irr); };
+    var irrDelta = (d===0 || cur.irr==null || base.irr==null) ? (d===0?'on-time plan':'') : ((cur.irr-base.irr)>0?'+':'−')+Math.abs((cur.irr-base.irr)*100).toFixed(1)+' pts vs on time';
+    var cards=[
+      ['Project profit', usd(cur.profit), delta(cur.profit-base.profit), cur.profit<0, cur.profit<base.profit],
+      ['Investor IRR', irrTxt(cur), irrDelta, cur.irr!=null && cur.irr<0, cur.irr!=null && base.irr!=null && cur.irr<base.irr],
+      ['Investor profit', usd(cur.investorProfit), delta(cur.investorProfit-base.investorProfit), cur.investorProfit<0, cur.investorProfit<base.investorProfit],
+      [spLab, usd(sp(cur)), delta(sp(cur)-sp(base)), sp(cur)<0, sp(cur)<sp(base)]
+    ];
+    document.getElementById('delayKpis').innerHTML = cards.map(function(c){
+      return '<div class="kpi"><div class="l">'+c[0]+'</div><div class="v'+(c[3]?' neg':'')+'">'+c[1]+'</div><div class="dl'+(c[4]?' neg':'')+'">'+c[2]+'</div></div>';
+    }).join('');
+
+    // bars: what the developer (or builder) earns at each month of delay, 0 to 24
+    var vals=[], mx=1; for (var m=0;m<=24;m++){ var v=sp(at(m)); vals.push(v); if (v>mx) mx=v; }
+    var svg='', bw=520/25;
+    for (var m=0;m<=24;m++){
+      var v=vals[m], h=v>0 ? Math.max(v/mx*100,1.5) : 3, x=m*bw+2, y=v>0 ? 108-h : 108;
+      var fill = v<=0 ? 'var(--bad)' : (m===d ? '#1b1a18' : 'var(--accent)');
+      svg+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(bw-4).toFixed(1)+'" height="'+h.toFixed(1)+'" rx="2" style="fill:'+fill+';opacity:'+(m===d||v<=0?1:.55)+'"><title>'+m+' months: '+usd(v)+'</title></rect>';
+    }
+    svg+='<line x1="0" y1="108.5" x2="520" y2="108.5" style="stroke:var(--rule);stroke-width:1"/>';
+    document.getElementById('delayBars').innerHTML=svg;
+    document.getElementById('delayAxis').innerHTML=[0,6,12,18,24].map(function(m){ return '<span style="left:'+((m+0.5)/25*100).toFixed(2)+'%">'+m+(m===24?' mo':'')+'</span>'; }).join('');
+    document.getElementById('delayCap').textContent = spLab+' by months of delay, 0 to 24. The dark bar is the delay selected; red means nothing is left.';
+
+    var steps=[0,3,6,9,12,18,24]; if (steps.indexOf(d)<0){ steps.push(d); steps.sort(function(a,b){ return a-b; }); }
+    var h='<tr><th>Delay</th><th>Project profit</th><th>Preferred return accrued</th><th>Investor profit</th><th>Investor IRR</th><th>'+spLab+'</th></tr>';
+    steps.forEach(function(m){
+      var x=at(m);
+      h+='<tr class="'+(m===d?'hl':'')+'"><td>'+(m===0?'On time':'+'+m+' months')+'</td>'+
+        '<td class="'+(x.profit<0?'neg':'')+'">'+usd(x.profit)+'</td><td>'+usd(x.prefDue)+'</td>'+
+        '<td class="'+(x.investorProfit<0?'neg':'')+'">'+usd(x.investorProfit)+'</td>'+
+        '<td class="'+(x.irr!=null&&x.irr<0?'neg':'')+'">'+irrTxt(x)+'</td>'+
+        '<td class="'+(sp(x)<0?'neg':'')+'">'+usd(sp(x))+'</td></tr>';
+    });
+    document.getElementById('delayTable').innerHTML=h;
+
+    var whatTxt = what==='build' ? 'construction' : (what==='hz' && s.type==='multi' ? 'approvals and the lot closing' : 'the home sale closings');
+    var yr=at(12), perMo=(sp(base)-sp(yr))/12;
+    var note = d===0
+      ? '<b>Move the slider to see what time costs.</b> Carry costs and the preferred return keep accruing until the homes close. On these numbers each month of delay in '+whatTxt+' takes about '+usd(perMo)+' from the '+SP.toLowerCase()+' over the first year.'
+      : '<b>A '+d+'-month delay in '+whatTxt+'</b> '+((base.profit-cur.profit)>1 ? 'takes '+usd(base.profit-cur.profit)+' out of project profit in carry and ' : '')+'adds '+usd(cur.prefDue-base.prefDue)+' to the preferred return owed to the investor. The '+SP.toLowerCase()+' gives up '+usd(sp(base)-sp(cur))+', and the investor’s IRR goes from '+irrTxt(base)+' to '+irrTxt(cur)+'.';
+    document.getElementById('delayNote').innerHTML=note;
+  }
+
+  function renderComps(r){
+    var tot=0, n=0, lo=Infinity, hi=0;
+    for (var i=0;i<6;i++){
+      var c=state.comps[i], cell=document.getElementById('cx_'+i), link=document.getElementById('cl_'+i);
+      var psf = (c[1]>0 && c[2]>0) ? c[1]/c[2] : 0;
+      cell.textContent = psf ? usd(psf)+' / sf' : '–';
+      if (psf){ tot+=psf; n++; lo=Math.min(lo,psf); hi=Math.max(hi,psf); }
+      if (/^[0-9]{4,}$/.test(c[0])){ link.href=COMP_URL+encodeURIComponent(c[0])+'/x'; link.removeAttribute('aria-disabled'); }
+      else { link.removeAttribute('href'); link.setAttribute('aria-disabled','true'); }
+    }
+    var panel=document.getElementById('compsPanel');
+    if (!n){ panel.classList.add('hidden'); return; }
+    panel.classList.remove('hidden');
+    var avg=tot/n, implied=avg*state.sfHeated, diff=state.salePrice>0 ? (state.salePrice-implied)/implied : 0;
+    var rowsList=[
+      {k:'Comparables entered', v:n, txt:String(n)},
+      {k:'Average price per heated sf', v:avg, txt:usd(avg)+' / sf'},
+      {k:'Range', v:0, txt:usd(lo)+' – '+usd(hi)},
+      {k:'Implied value at '+(state.sfHeated||0).toLocaleString('en-US')+' sf', v:implied, cls:'sub'},
+      {k:'Your sale price vs comps', v:diff, txt:(diff>0?'+':'')+pct(diff)+' ('+usd(state.salePrice)+')', cls:'total'},
+      {k:'Your total cost per sf', v:r.psf, txt:usd(r.psf)+' / sf'}
+    ];
+    rows('compsOut', rowsList);
+    var warn=document.getElementById('compsWarn');
+    warn.textContent = Math.abs(diff)>0.1 ? 'Your sale price is more than 10% away from what these comps imply. Either the comps are not comparable or the price needs another look.' : '';
+    warn.classList.toggle('hidden', Math.abs(diff)<=0.1);
+  }
+
+  // ---------- Link ----------
+  function toHash(){
+    var o={t:state.type, f:state.fund}; if (state.itemize) o.it=1;
+    Object.keys(FIELDS).forEach(function(k){ if (state[k]!==FIELDS[k].def) o[k]=state[k]; });
+    if (state.comps.some(function(c){ return c[0]||c[1]||c[2]; })) o.c=state.comps;
+    var qk=Object.keys(state.q).filter(function(k){ return state.q[k]; }); if (qk.length) o.q=qk.join(',');
+    return '#'+encodeURIComponent(JSON.stringify(o));
+  }
+  function fromHash(){
+    try{
+      if (!location.hash || location.hash.length<3) return;
+      var o=JSON.parse(decodeURIComponent(location.hash.slice(1)));
+      if (o.t==='multi'||o.t==='single') state.type=o.t;
+      if (o.f==='loan'||o.f==='equity') state.fund=o.f;
+      state.itemize=!!o.it;
+      if (typeof o.q==='string') o.q.split(',').forEach(function(k){ if (QKEYS[k]) state.q[k]=true; });
+      if (Array.isArray(o.c)) for (var i=0;i<6;i++){
+        var c=o.c[i]||['',0,0];
+        state.comps[i]=[String(c[0]||'').slice(0,20), +c[1]||0, +c[2]||0];
+      }
+      Object.keys(o).forEach(function(k){
+        if(!FIELDS[k]) return;
+        var t=FIELDS[k].type;
+        if (t==='text') state[k]=String(o[k]).slice(0,200);
+        else if (t==='area') state[k]=String(o[k]).slice(0,2000);
+        else if (t==='select') state[k]=String(o[k]).slice(0,20);
+        else { var v=parseFloat(o[k]); if (isFinite(v)) state[k]=v; }
+      });
+    }catch(e){}
+  }
+
+  // ---------- Events ----------
+  function sync(){ readUI(); applyMode(); render(); try{ history.replaceState(null,'',toHash()); }catch(e){} }
+  host.addEventListener('input', sync);
+  host.addEventListener('focusout', function(e){
+    var m=(e.target.id||'').match(/^cp_(\d)$/);
+    if (m) e.target.value = state.comps[+m[1]][1] ? fmtUSDInput(state.comps[+m[1]][1]) : '';
+  });
+  host.addEventListener('change', sync);
+  host.addEventListener('focusout', function(e){
+    var id=(e.target.id||'').replace('f_','');
+    if (FIELDS[id] && FIELDS[id].type==='usd') e.target.value=fmtUSDInput(state[id]);
+  });
+  document.querySelectorAll('.mode').forEach(function(b){
+    b.addEventListener('click', function(){
+      if (b.dataset.group==='type') state.type=b.dataset.mode; else state.fund=b.dataset.mode;
+      applyMode(); render(); try{ history.replaceState(null,'',toHash()); }catch(e){}
+    });
+  });
+  document.getElementById('delayMonths').addEventListener('input', function(){ renderDelay(state); });
+  document.getElementById('delayWhat').addEventListener('change', function(){ renderDelay(state); });
+  document.getElementById('btnPrint').addEventListener('click', function(){ window.print(); });
+  document.getElementById('btnReset').addEventListener('click', function(){
+    var t=state.type, f=state.fund;
+    Object.keys(FIELDS).forEach(function(k){ state[k]=FIELDS[k].def; });
+    state.type=t; state.fund=f; state.itemize=false; state.q={};
+    document.getElementById('delayMonths').value=0;
+    state.comps=[['',0,0],['',0,0],['',0,0],['',0,0],['',0,0],['',0,0]];
+    writeUI(); render();
+    try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+  });
+  document.getElementById('btnLink').addEventListener('click', function(){
+    var url=location.href.split('#')[0]+toHash();
+    var done=function(){ var c=document.getElementById('copied'); c.classList.remove('hidden'); setTimeout(function(){ c.classList.add('hidden'); },2000); };
+    try{ navigator.clipboard.writeText(url).then(done, function(){ fb(url); done(); }); }catch(e){ fb(url); done(); }
+  });
+  function fb(t){ var ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(e){} document.body.removeChild(ta); }
+
+  fromHash();
+  writeUI();
+  render();
+})();
+</script>
+</body>
+</html>
