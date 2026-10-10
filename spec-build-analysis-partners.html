@@ -211,6 +211,11 @@
   .kpis.four{grid-template-columns:repeat(4,1fr)}
   .kpi .dl{font-size:12px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
   .kpi .dl.neg{color:var(--bad)}
+  .field.bad .ctl{border-color:var(--bad);box-shadow:0 0 0 2px var(--bad-bg)}
+  .panel.warn{background:var(--bad-bg);border-color:var(--bad)}
+  .panel.warn h3{color:var(--bad)}
+  .panel.warn ul{margin:0 0 10px;padding-left:18px;font-size:13.5px}
+  .panel.warn li{margin-bottom:6px}
   .bars{width:100%;height:120px;display:block;margin:10px 0 0}
   .axis{position:relative;height:18px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
   .axis span{position:absolute;top:2px;transform:translateX(-50%)}
@@ -284,6 +289,11 @@
         <button class="btn" id="btnLink">Copy link to this analysis</button>
         <button class="btn" id="btnReset">Reset</button>
         <span class="copied hidden" id="copied">Link copied</span>
+      </div>
+
+      <div class="panel warn hidden" id="warnPanel">
+        <h3>Check these inputs</h3>
+        <ul id="warns"></ul>
       </div>
 
       <div class="panel">
@@ -470,7 +480,8 @@
       {id:'commPct', label:'Real estate commission', type:'pct', def:5, show:'q-nolist'},
       {id:'commListPct', label:'Listing commission kept by the developer', type:'pct', def:3, show:'q-list'},
       {id:'commBuyerPct', label:'Buyer’s agent commission', type:'pct', def:3, show:'q-list'},
-      {id:'sellerClosePct', label:'Seller closing costs', type:'pct', def:1.5},
+      {id:'sellerClosePct', label:'Seller closing costs (% of price)', type:'pct', def:1.5},
+      {id:'sellerCloseFlat', label:'Seller closing costs (flat amount)', type:'usd', def:0},
       {id:'marketing', label:'Marketing, staging & photography', type:'usd', def:15000},
       {id:'concessions', label:'Buyer concessions allowance', type:'usd', def:0}
     ]},
@@ -594,6 +605,7 @@
     splitAbovePct:'The share of profit above the investor’s hurdle that goes to the developer or builder. The investor receives the rest.',
     deferFeePct:'The share of the builder fee that is not paid through the budget. It is paid at closing after the investor’s capital and preferred return, ahead of the profit split, and only if there is money to pay it.',
     deferCommPct:'The share of the listing commission held back at closing and paid after the investor’s capital and preferred return, ahead of the profit split.',
+    sellerCloseFlat:'Seller closing costs you know as a dollar figure, such as a quoted attorney fee. Added on top of the percentage above, so use one or the other for the same cost.',
     dealNotes:'Anything a reader must know that the numbers do not show: who signs on the loan and whether it is recourse, who controls list price and timing, what happens on a cost overrun or a capital call, how long capital is locked, who holds title, and the plan if the home does not sell. These notes print with the analysis.'
   };
 
@@ -857,7 +869,8 @@
     var listPct = q.list ? p(s.commListPct) : 0;
     var commAll = q.list ? p(s.commListPct)+p(s.commBuyerPct) : p(s.commPct);
     var listComm = s.salePrice*listPct;
-    var sellingCost = s.salePrice*(commAll+p(s.sellerClosePct)) + s.marketing + s.concessions;
+    var sellFlat = s.sellerCloseFlat||0;
+    var sellingCost = s.salePrice*(commAll+p(s.sellerClosePct)) + sellFlat + s.marketing + s.concessions;
 
     // deferred fees: not paid through the budget or at closing; paid after capital and preferred return
     var deferFee = q.defer ? fee*Math.min(p(s.deferFeePct),1) : 0;
@@ -1001,7 +1014,7 @@
       margin: s.salePrice>0 ? profit/s.salePrice : 0,
       roc: totalCost>0 ? profit/totalCost : 0,
       psf: s.sfHeated>0 ? totalCost/s.sfHeated : 0,
-      breakeven: (1-commAll-p(s.sellerClosePct))>0 ? (totalCost+s.marketing+s.concessions-changeRev)/(1-commAll-p(s.sellerClosePct)) : 0
+      breakeven: (1-commAll-p(s.sellerClosePct))>0 ? (totalCost+sellFlat+s.marketing+s.concessions-changeRev)/(1-commAll-p(s.sellerClosePct)) : 0
     };
   }
 
@@ -1060,6 +1073,18 @@
   function render(){
     var s=state, r=compute(s);
     var Q=s.q||{}, sep=!!Q.sep, SP=sep?'Developer':'Builder', P=r.proj;
+    // percent fields holding a number over 100 are almost always dollars typed into the wrong box
+    var warns=[];
+    Object.keys(FIELDS).forEach(function(k){
+      if (FIELDS[k].type!=='pct') return;
+      var el=document.getElementById('f_'+k), wrap=el.closest('.field'), bad=(s[k]||0)>100 && !wrap.classList.contains('hidden');
+      wrap.classList.toggle('bad', bad);
+      if (!bad) return;
+      var lab=(document.querySelector('label[for="f_'+k+'"]')||{}).textContent||FIELDS[k].label;
+      warns.push('<b>'+lab+'</b> is a percent field and reads '+(s[k]).toLocaleString('en-US')+'%. '+(k==='sellerClosePct' ? 'If you meant '+usd(s[k])+', enter it under Seller closing costs (flat amount) and set this field to 0.' : 'Enter a value from 0 to 100.'));
+    });
+    document.getElementById('warns').innerHTML=warns.map(function(x){ return '<li>'+x+'</li>'; }).join('');
+    document.getElementById('warnPanel').classList.toggle('hidden', !warns.length);
     var kp=document.getElementById('kProfit'); kp.textContent=usd(r.profit); kp.classList.toggle('neg', r.profit<0);
     var km=document.getElementById('kMargin'); km.textContent=pct(r.margin); km.classList.toggle('neg', r.margin<0);
     document.getElementById('kCost').textContent=usd(r.totalCost);
